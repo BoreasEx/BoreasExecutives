@@ -180,7 +180,6 @@ export async function POST(request: Request) {
       });
     }
 
-    const modelConfig = chatModels.find((m) => m.id === chatModel);
     const modelCapabilities = await getCapabilities();
     const capabilities = modelCapabilities[chatModel];
     const isReasoningModel = capabilities?.reasoning === true;
@@ -280,9 +279,9 @@ export async function POST(request: Request) {
           });
         }
       },
-      onError: (error) => {
-        return "Oops, an error occurred!";
-      },
+      onError: () => {
+  return "Oops, an error occurred!";
+},
     });
 
     return createUIMessageStreamResponse({
