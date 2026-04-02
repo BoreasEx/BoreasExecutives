@@ -26,13 +26,10 @@ export async function generateTitleFromUserMessage({
   message: UIMessage;
 }) {
   const { text } = await generateText({
-    model: getTitleModel(),
-    system: titlePrompt,
-    prompt: getTextFromMessage(message),
-    providerOptions: {
-      gateway: { order: titleModel.gatewayOrder },
-    },
-  });
+  model: getTitleModel(),
+  prompt: titlePrompt(message),
+  providerOptions: {},
+});
   return text
     .replace(/^[#*"\s]+/, "")
     .replace(/["]+$/, "")
