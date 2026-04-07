@@ -75,6 +75,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
 
   const [currentModelId, setCurrentModelId] = useState(DEFAULT_CHAT_MODEL);
   const currentModelIdRef = useRef(currentModelId);
+
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
   }, [currentModelId]);
@@ -93,6 +94,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const initialMessages: ChatMessage[] = isNewChat
     ? []
     : (chatData?.messages ?? []);
+
   const visibility: VisibilityType = isNewChat
     ? "private"
     : (chatData?.visibility ?? "private");
@@ -110,6 +112,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
     id: chatId,
     messages: initialMessages,
     generateId: generateUUID,
+
     sendAutomaticallyWhen: ({ messages: currentMessages }) => {
       const lastMessage = currentMessages.at(-1);
       return (
@@ -122,18 +125,21 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
         ) ?? false
       );
     },
+
     transport: new DefaultChatTransport({
       api: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat`,
       fetch: fetchWithErrorHandlers,
       prepareSendMessagesRequest(request) {
         const lastMessage = request.messages.at(-1);
+
         const isToolApprovalContinuation =
           lastMessage?.role !== "user" ||
           request.messages.some((msg) =>
             msg.parts?.some((part) => {
               const state = (part as { state?: string }).state;
               return (
-                state === "approval-responded" || state === "output-denied"
+                state === "approval-responded" ||
+                state === "output-denied"
               );
             })
           );
@@ -151,28 +157,32 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
         };
       },
     }),
+
     onData: (dataPart) => {
       setDataStream((ds) => (ds ? [...ds, dataPart] : []));
     },
+
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
-onError: (error) => {
-  if (error.message?.includes("insufficient_quota")) {
-    toast({
-      type: "error",
-      description:
-        "OpenAI quota exceeded. Please check billing and usage limits.",
-    });
-  } else if (error instanceof ChatbotError) {
-    toast({ type: "error", description: error.message });
-  } else {
-    toast({
-      type: "error",
-      description: error.message || "Oops, an error occurred!",
-    });
-  }
-},
+
+    onError: (error) => {
+      if (error.message?.includes("insufficient_quota")) {
+        toast({
+          type: "error",
+          description:
+            "OpenAI quota exceeded. Please check billing and usage limits.",
+        });
+      } else if (error instanceof ChatbotError) {
+        toast({ type: "error", description: error.message });
+      } else {
+        toast({
+          type: "error",
+          description: error.message || "Oops, an error occurred!",
+        });
+      }
+    },
+  });
 
   const loadedChatIds = useRef(new Set<string>());
 
@@ -191,6 +201,7 @@ onError: (error) => {
   }, [chatId, chatData?.messages, setMessages]);
 
   const prevChatIdRef = useRef(chatId);
+
   useEffect(() => {
     if (prevChatIdRef.current !== chatId) {
       prevChatIdRef.current = chatId;
@@ -206,6 +217,7 @@ onError: (error) => {
         .split("; ")
         .find((row) => row.startsWith("chat-model="))
         ?.split("=")[1];
+
       if (cookieModel) {
         setCurrentModelId(decodeURIComponent(cookieModel));
       }
@@ -213,16 +225,20 @@ onError: (error) => {
   }, [chatData, isNewChat]);
 
   const hasAppendedQueryRef = useRef(false);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const query = params.get("query");
+
     if (query && !hasAppendedQueryRef.current) {
       hasAppendedQueryRef.current = true;
+
       window.history.replaceState(
         {},
         "",
         `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
       );
+
       sendMessage({
         role: "user" as const,
         parts: [{ type: "text", text: query }],
@@ -237,7 +253,9 @@ onError: (error) => {
     setMessages,
   });
 
-  const isReadonly = isNewChat ? false : (chatData?.isReadonly ?? false);
+  const isReadonly = isNewChat
+    ? false
+    : (chatData?.isReadonly ?? false);
 
   const { data: votes } = useSWR<Vote[]>(
     !isReadonly && messages.length >= 2
