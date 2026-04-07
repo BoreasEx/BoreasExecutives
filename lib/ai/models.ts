@@ -1,8 +1,8 @@
-export const DEFAULT_CHAT_MODEL = "gpt-5.1-mini";
+export const DEFAULT_CHAT_MODEL = "gpt-4.1-mini";
 
 export const titleModel = {
   id: "gpt-4.1-mini",
-  name: "GPT-4.1 Mini",
+  name: "gpt-4.1-mini",
   provider: "openai",
   description: "Fast model for title generation",
 };
@@ -24,7 +24,7 @@ export type ChatModel = {
 export const chatModels: ChatModel[] = [
   {
     id: "gpt-4.1-mini",
-    name: "GPT-4.1 Mini",
+    name: "gpt-4.1-mini",
     provider: "openai",
     description: "Fast model for Boreas",
   },
