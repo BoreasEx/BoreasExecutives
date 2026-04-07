@@ -1,19 +1,69 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
-import { SessionProvider } from "next-auth/react";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://boreasexecutives.com"),
-  title: "Next.js Chatbot Template",
-  description: "Boreas Executives AI assistant.",
+  title: {
+    default: "Boreas Executives",
+    template: "%s | Boreas Executives",
+  },
+  description:
+    "Boreas Executives is an AI-powered negotiation and decision support interface inspired by Boreas, the Greek god of the north wind.",
+  applicationName: "Boreas Executives",
+  keywords: [
+    "Boreas Executives",
+    "AI negotiation",
+    "procurement simulation",
+    "industrial buyer",
+    "frozen fruit",
+    "IQF strawberries",
+    "B2B negotiation",
+  ],
+  authors: [{ name: "Boreas Executives" }],
+  creator: "Boreas Executives",
+  publisher: "Boreas Executives",
+  icons: {
+    icon: "/boreas-executives-logo.png",
+    shortcut: "/boreas-executives-logo.png",
+    apple: "/boreas-executives-logo.png",
+  },
+  openGraph: {
+    title: "Boreas Executives",
+    description:
+      "AI-powered negotiation and decision support inspired by Boreas, the Greek god of the north wind.",
+    url: "https://boreasexecutives.com",
+    siteName: "Boreas Executives",
+    images: [
+      {
+        url: "/boreas-executives-logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Boreas Executives",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Boreas Executives",
+    description:
+      "AI-powered negotiation and decision support inspired by Boreas, the Greek god of the north wind.",
+    images: ["/boreas-executives-logo.png"],
+  },
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   maximumScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "hsl(0 0% 100%)" },
+    { media: "(prefers-color-scheme: dark)", color: "hsl(240deg 10% 3.92%)" },
+  ],
 };
 
 const geist = Geist({
@@ -61,18 +111,17 @@ export default function RootLayout({
     >
       <head>
         <script
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: "Required"
           dangerouslySetInnerHTML={{
             __html: THEME_COLOR_SCRIPT,
           }}
         />
       </head>
-      <body className="antialiased">
+      <body className="antialiased bg-background text-foreground">
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           disableTransitionOnChange
-          enableSystem
+          enableSystem={false}
         >
           <SessionProvider
             basePath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth`}

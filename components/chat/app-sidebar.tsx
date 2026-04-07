@@ -72,14 +72,21 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             <SidebarMenuItem className="flex flex-row items-center justify-between">
               <div className="group/logo relative flex items-center justify-center">
                 <SidebarMenuButton
-                  asChild
-                  className="size-8 !px-0 items-center justify-center group-data-[collapsible=icon]:group-hover/logo:opacity-0"
-                  tooltip="Chatbot"
-                >
-                  <Link href="/" onClick={() => setOpenMobile(false)}>
-                    <MessageSquareIcon className="size-4 text-sidebar-foreground/50" />
-                  </Link>
-                </SidebarMenuButton>
+  asChild
+  className="flex items-center gap-2 !px-0 group-data-[collapsible=icon]:group-hover/logo:opacity-0"
+  tooltip="Boreas Executives"
+>
+  <Link href="/" onClick={() => setOpenMobile(false)} className="flex items-center">
+    <img
+      src="/boreas-executives-logo.png"
+      alt="Boreas Executives"
+      className="size-6 object-contain"
+    />
+    <span className="ml-2 text-sm font-semibold text-sidebar-foreground">
+      Boreas
+    </span>
+  </Link>
+</SidebarMenuButton>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <SidebarMenuButton
@@ -114,7 +121,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     tooltip="New Chat"
                   >
                     <PenSquareIcon className="size-4" />
-                    <span className="font-medium">New chat</span>
+                    <span className="font-medium">New Negotiation</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {user && (
@@ -125,7 +132,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                       tooltip="Delete All Chats"
                     >
                       <TrashIcon className="size-4" />
-                      <span className="text-[13px]">Delete all</span>
+                      <span className="text-[13px]">Clear sessions</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}

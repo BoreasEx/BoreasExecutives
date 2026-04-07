@@ -61,11 +61,55 @@ function PureMessages({
 
   return (
     <div className="relative flex-1 bg-background">
-      {messages.length === 0 && !isLoading && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <Greeting />
+     {messages.length === 0 && !isLoading && (
+  <div className="absolute inset-0 z-10 flex items-center justify-center px-6">
+    <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-8 shadow-[var(--shadow-float)] backdrop-blur">
+      <div className="mb-6 flex items-center gap-4">
+        <img
+          src="/boreas-executives-logo.png"
+          alt="Boreas Executives"
+          className="h-12 w-12 object-contain"
+        />
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            Boreas Executives
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            AI-powered negotiation simulator
+          </p>
         </div>
-      )}
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-sm text-foreground/90">
+          Simulation context: industrial procurement negotiation
+        </p>
+        <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+          <div className="rounded-lg border border-border/50 bg-background/60 p-3">
+            <span className="font-medium text-foreground">Product</span>
+            <div>IQF strawberries</div>
+          </div>
+          <div className="rounded-lg border border-border/50 bg-background/60 p-3">
+            <span className="font-medium text-foreground">Origin</span>
+            <div>Egypt</div>
+          </div>
+          <div className="rounded-lg border border-border/50 bg-background/60 p-3">
+            <span className="font-medium text-foreground">Buyer</span>
+            <div>French jam manufacturer</div>
+          </div>
+          <div className="rounded-lg border border-border/50 bg-background/60 p-3">
+            <span className="font-medium text-foreground">Style</span>
+            <div>Demanding, concise, risk-focused</div>
+          </div>
+        </div>
+
+        <div className="pt-3 text-sm text-muted-foreground">
+          Start by presenting your offer. Boreas will respond as a strict industrial buyer.
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       <div
         className={cn(
           "absolute inset-0 touch-pan-y overflow-y-auto",
@@ -74,7 +118,7 @@ function PureMessages({
         ref={messagesContainerRef}
         style={isArtifactVisible ? { scrollbarWidth: "none" } : undefined}
       >
-        <div className="mx-auto flex min-h-full min-w-0 max-w-4xl flex-col gap-5 px-2 py-6 md:gap-7 md:px-4">
+        <div className="mx-auto flex min-h-full min-w-0 max-w-5xl flex-col gap-6 px-4 py-8 md:gap-8 md:px-6">
           {messages.map((message, index) => (
             <PreviewMessage
               addToolApprovalResponse={addToolApprovalResponse}
@@ -110,18 +154,19 @@ function PureMessages({
         </div>
       </div>
 
-      <button
-        aria-label="Scroll to bottom"
-        className={`absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full border border-border/50 bg-card/90 px-3.5 shadow-[var(--shadow-float)] backdrop-blur-lg transition-all duration-200 h-7 text-[10px] ${
-          isAtBottom
-            ? "pointer-events-none scale-90 opacity-0"
-            : "pointer-events-auto scale-100 opacity-100"
-        }`}
-        onClick={() => scrollToBottom("smooth")}
-        type="button"
-      >
-        <ArrowDownIcon className="size-3 text-muted-foreground" />
-      </button>
+<button
+  aria-label="Scroll to bottom"
+  className={`absolute bottom-5 left-1/2 z-10 flex h-8 -translate-x-1/2 items-center gap-2 rounded-full border border-border/50 bg-card/90 px-4 text-[11px] text-muted-foreground shadow-[var(--shadow-float)] backdrop-blur-lg transition-all duration-200 ${
+    isAtBottom
+      ? "pointer-events-none scale-90 opacity-0"
+      : "pointer-events-auto scale-100 opacity-100 hover:text-foreground"
+  }`}
+  onClick={() => scrollToBottom("smooth")}
+  type="button"
+>
+  <ArrowDownIcon className="size-3" />
+  <span>Latest exchange</span>
+</button>
     </div>
   );
 }
