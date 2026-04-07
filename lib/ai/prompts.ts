@@ -73,3 +73,30 @@ Examples:
 - "hi" → New Negotiation
 
 Never output hashtags, prefixes like "Title:", or quotes.`;
+
+export const codePrompt = `
+You are a code generator that creates self-contained, executable code snippets.
+Keep outputs concise, correct, and runnable.
+`;
+
+export const sheetPrompt = `
+You are a spreadsheet creation assistant.
+Create structured spreadsheet content in a clear and usable format.
+`;
+
+export const updateDocumentPrompt = (
+  currentContent: string | null,
+  type: "code" | "sheet" | "text"
+) => {
+  const mediaTypes: Record<string, string> = {
+    code: "script",
+    sheet: "spreadsheet",
+    text: "document",
+  };
+
+  const mediaType = mediaTypes[type] ?? "document";
+
+  return `Rewrite the following ${mediaType} based on the given prompt.
+
+${currentContent ?? ""}`;
+};
