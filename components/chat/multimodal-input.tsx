@@ -109,9 +109,17 @@ function PureMultimodalInput({
 }) {
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { width } = useWindowSize();
-  const hasAutoFocused = useRef(false);
+const textareaRef = useRef<HTMLTextAreaElement>(null);
+const { width } = useWindowSize();
+const hasAutoFocused = useRef(false);
+
+const isMobile = typeof width !== "number" || width < 640;
+
+const composerPlaceholder = editingMessage
+  ? "Revise your negotiation message..."
+  : isMobile
+    ? "Present your IQF offer."
+    : "You are an EGYPTIAN IQF STRAWBERRY SUPPLIER. Present your offer to a FRENCH JAM MANUFACTURER buying HIGH VOLUMES.";
 
   useEffect(() => {
     if (!hasAutoFocused.current && width) {
@@ -213,10 +221,6 @@ function PureMultimodalInput({
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
   const [slashIndex, setSlashIndex] = useState(0);
-
-  const composerPlaceholder = editingMessage
-    ? "Revise your negotiation message..."
-    : "Present your offer...";
 
   const submitForm = useCallback(() => {
     window.history.pushState(
@@ -421,20 +425,6 @@ function PureMultimodalInput({
         )}
       </div>
 
-      {!editingMessage && (
-        <div className="px-2 text-[12px] leading-relaxed text-foreground/75 sm:text-[13px]">
-          You are an{" "}
-          <span className="font-medium text-foreground">
-            EGYPTIAN IQF STRAWBERRY SUPPLIER
-          </span>
-          . Present your offer to a{" "}
-          <span className="font-medium text-foreground">
-            FRENCH JAM MANUFACTURER
-          </span>{" "}
-          buying{" "}
-          <span className="font-medium text-foreground">HIGH VOLUMES</span>.
-        </div>
-      )}
 
       <PromptInput
         className="[&>div]:rounded-2xl [&>div]:border [&>div]:border-border/50 [&>div]:bg-card/80 [&>div]:shadow-[var(--shadow-composer)] [&>div]:backdrop-blur [&>div]:transition-all [&>div]:duration-300 [&>div]:focus-within:border-foreground/20 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
