@@ -107,46 +107,64 @@ function PureMultimodalInput({
   onCancelEdit?: () => void;
   isLoading?: boolean;
 }) {
-  const router = useRouter();
-  const { setTheme, resolvedTheme } = useTheme();
+const router = useRouter();
+const { setTheme, resolvedTheme } = useTheme();
 const textareaRef = useRef<HTMLTextAreaElement>(null);
 const { width } = useWindowSize();
 const hasAutoFocused = useRef(false);
+const fileInputRef = useRef<HTMLInputElement>(null);
 
-const isMobile = typeof width !== "number" || width < 640;
+const [uploadQueue, setUploadQueue] = useState<string[]>([]);
+const [slashOpen, setSlashOpen] = useState(false);
+const [slashQuery, setSlashQuery] = useState("");
+const [slashIndex, setSlashIndex] = useState(0);
+const [isMobileComposer, setIsMobileComposer] = useState(false);
+
+const [localStorageInput, setLocalStorageInput] = useLocalStorage(
+  "input",
+  ""
+);
+
+useEffect(() => {
+  if (!hasAutoFocused.current && width) {
+    const timer = setTimeout(() => {
+      textareaRef.current?.focus();
+      hasAutoFocused.current = true;
+    }, 100);
+    return () => clearTimeout(timer);
+  }
+}, [width]);
+
+useEffect(() => {
+  const mediaQuery = window.matchMedia("(max-width: 639px)");
+
+  const updateIsMobileComposer = () => {
+    setIsMobileComposer(mediaQuery.matches);
+  };
+
+  updateIsMobileComposer();
+  mediaQuery.addEventListener("change", updateIsMobileComposer);
+
+  return () => {
+    mediaQuery.removeEventListener("change", updateIsMobileComposer);
+  };
+}, []);
 
 const composerPlaceholder = editingMessage
   ? "Revise your negotiation message..."
-  : isMobile
+  : isMobileComposer
     ? "Present your IQF offer."
     : "You are an EGYPTIAN IQF STRAWBERRY SUPPLIER. Present your offer to a FRENCH JAM MANUFACTURER buying HIGH VOLUMES.";
 
-  useEffect(() => {
-    if (!hasAutoFocused.current && width) {
-      const timer = setTimeout(() => {
-        textareaRef.current?.focus();
-        hasAutoFocused.current = true;
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [width]);
+useEffect(() => {
+  if (!input && localStorageInput?.trim()) {
+    setInput(localStorageInput);
+  }
+}, [input, localStorageInput, setInput]);
 
-  const [localStorageInput, setLocalStorageInput] = useLocalStorage(
-    "input",
-    ""
-  );
-
-  useEffect(() => {
-    if (!input && localStorageInput?.trim()) {
-      setInput(localStorageInput);
-    }
-  }, [input, localStorageInput, setInput]);
-
-  useEffect(() => {
-    setLocalStorageInput(input);
-  }, [input, setLocalStorageInput]);
-
-  const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+useEffect(() => {
+  setLocalStorageInput(input);
+}, [input, setLocalStorageInput]);
     const val = event.target.value;
     setInput(val);
 
@@ -215,12 +233,6 @@ const composerPlaceholder = editingMessage
         break;
     }
   };
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadQueue, setUploadQueue] = useState<string[]>([]);
-  const [slashOpen, setSlashOpen] = useState(false);
-  const [slashQuery, setSlashQuery] = useState("");
-  const [slashIndex, setSlashIndex] = useState(0);
 
   const submitForm = useCallback(() => {
     window.history.pushState(
