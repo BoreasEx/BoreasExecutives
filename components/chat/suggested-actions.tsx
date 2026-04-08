@@ -41,7 +41,7 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
           }}
         >
           <Suggestion
-className="h-auto w-full whitespace-nowrap rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-left text-[12px] leading-relaxed text-foreground/85 transition-all duration-200 sm:whitespace-normal sm:p-4 sm:text-[13px] hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.04] hover:text-white hover:shadow-[var(--shadow-card)]"
+className="h-auto w-full whitespace-nowrap rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-left text-[12px] leading-relaxed text-foreground/75 transition-all duration-200 sm:whitespace-normal sm:p-4 sm:text-[13px] hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.04] hover:text-white hover:shadow-[var(--shadow-card)]"
             onClick={(suggestion) => {
               window.history.pushState(
                 {},
