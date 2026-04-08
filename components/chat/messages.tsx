@@ -80,20 +80,17 @@ function PureMessages({
         </div>
       </div>
 
-      <div className="space-y-4">
-        <p className="mx-auto max-w-2xl text-center text-sm leading-relaxed text-foreground/90">
-          Simulation context: industrial procurement negotiation for{" "}
-          <strong>"IQF strawberries"</strong>, origin{" "}
-          <strong>"Egypt"</strong>. The buyer is a{" "}
-          <strong>"French Jam manufacturer"</strong>, the style of negotiation
-          is <strong>"demanding, concise risk focused"</strong>.
-        </p>
-
-        <div className="mx-auto max-w-xl pt-3 text-center text-sm text-muted-foreground">
-          Start by presenting your offer. Boreas will respond as a strict
-          industrial buyer.
-        </div>
-      </div>
+<div className="space-y-4">
+  <p className="text-xs uppercase tracking-wider text-muted-foreground text-center max-w-3xl mx-auto">
+    <span className="text-foreground font-medium">Product:</span> IQF strawberries
+    <span className="mx-2 opacity-40">|</span>
+    <span className="text-foreground font-medium">Origin:</span> Egypt
+    <span className="mx-2 opacity-40">|</span>
+    <span className="text-foreground font-medium">Buyer:</span> French Jam manufacturer
+    <span className="mx-2 opacity-40">|</span>
+    <span className="text-foreground font-medium">Style:</span> demanding, concise, risk-focused
+  </p>
+</div>
     </div>
   </div>
 )}      <div
