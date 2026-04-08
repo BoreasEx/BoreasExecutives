@@ -128,13 +128,13 @@ function PureMultimodalInput({
     ""
   );
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      const domValue = textareaRef.current.value;
-      const finalValue = domValue || localStorageInput || "";
-      setInput(finalValue);
-    }
-  }, [localStorageInput, setInput]);
+// useEffect(() => {
+//   if (textareaRef.current) {
+//     const domValue = textareaRef.current.value;
+//     const finalValue = domValue || localStorageInput || "";
+//     setInput(finalValue);
+//   }
+// }, [localStorageInput, setInput]);
 
   useEffect(() => {
     setLocalStorageInput(input);
