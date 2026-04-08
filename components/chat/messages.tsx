@@ -75,7 +75,7 @@ function PureMessages({
             Boreas Executives
           </h1>
           <p className="text-sm text-muted-foreground">
-            AI-powered negotiation simulator
+            AI-powered IQF fruits negotiation simulator
           </p>
         </div>
       </div>
@@ -84,30 +84,19 @@ function PureMessages({
         <p className="text-sm text-foreground/90">
           Simulation context: industrial procurement negotiation
         </p>
-        <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
-          <div className="rounded-lg border border-border/50 bg-background/60 p-3">
-            <span className="font-medium text-foreground">Product</span>
-            <div>IQF strawberries</div>
-          </div>
-          <div className="rounded-lg border border-border/50 bg-background/60 p-3">
-            <span className="font-medium text-foreground">Origin</span>
-            <div>Egypt</div>
-          </div>
-          <div className="rounded-lg border border-border/50 bg-background/60 p-3">
-            <span className="font-medium text-foreground">Buyer</span>
-            <div>French jam manufacturer</div>
-          </div>
-          <div className="rounded-lg border border-border/50 bg-background/60 p-3">
-            <span className="font-medium text-foreground">Style</span>
-            <div>Demanding, concise, risk-focused</div>
-          </div>
-        </div>
+<div className="space-y-4">
+  <p className="text-sm text-foreground/90 text-center max-w-2xl mx-auto leading-relaxed">
+    Simulation context: industrial procurement negotiation for{" "}
+    <strong>"IQF strawberries"</strong>, origin{" "}
+    <strong>"Egypt"</strong>. The buyer is a{" "}
+    <strong>"French Jam manufacturer"</strong>, the style of negotiation is{" "}
+    <strong>"demanding, concise risk focused"</strong>.
+  </p>
 
-        <div className="pt-3 text-sm text-muted-foreground">
-          Start by presenting your offer. Boreas will respond as a strict industrial buyer.
-        </div>
-      </div>
-    </div>
+  <div className="pt-3 text-sm text-muted-foreground text-center max-w-xl mx-auto">
+    Start by presenting your offer. Boreas will respond as a strict industrial buyer.
+  </div>
+</div>   </div>
   </div>
 )}
       <div
