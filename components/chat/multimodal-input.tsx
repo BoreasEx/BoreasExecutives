@@ -512,7 +512,7 @@ function PureMultimodalInput({
 placeholder={
   editingMessage
     ? "Revise your negotiation message..."
-    : "Present your offer, pricing, and supply conditions..."
+    : "You are an Egyptian IQF strawberry supplier. Present your offer to a high-volume French jam manufacturer."
 }
           ref={textareaRef}
           value={input}
