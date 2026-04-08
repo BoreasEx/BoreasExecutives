@@ -14,8 +14,8 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   type ChangeEvent,
-  type Dispatch,
   memo,
+  type Dispatch,
   type SetStateAction,
   useCallback,
   useEffect,
@@ -64,7 +64,6 @@ import type { VisibilityType } from "./visibility-selector";
 
 function setCookie(name: string, value: string) {
   const maxAge = 60 * 60 * 24 * 365;
-  // biome-ignore lint/suspicious/noDocumentCookie: needed for client-side cookie setting
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
 }
 
@@ -96,9 +95,7 @@ function PureMultimodalInput({
   setAttachments: Dispatch<SetStateAction<Attachment[]>>;
   messages: UIMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
-  sendMessage:
-    | UseChatHelpers<ChatMessage>["sendMessage"]
-    | (() => Promise<void>);
+  sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
   className?: string;
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
@@ -107,64 +104,67 @@ function PureMultimodalInput({
   onCancelEdit?: () => void;
   isLoading?: boolean;
 }) {
-const router = useRouter();
-const { setTheme, resolvedTheme } = useTheme();
-const textareaRef = useRef<HTMLTextAreaElement>(null);
-const { width } = useWindowSize();
-const hasAutoFocused = useRef(false);
-const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const { setTheme, resolvedTheme } = useTheme();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasAutoFocused = useRef(false);
+  const { width } = useWindowSize();
 
-const [uploadQueue, setUploadQueue] = useState<string[]>([]);
-const [slashOpen, setSlashOpen] = useState(false);
-const [slashQuery, setSlashQuery] = useState("");
-const [slashIndex, setSlashIndex] = useState(0);
-const [isMobileComposer, setIsMobileComposer] = useState(false);
+  const [uploadQueue, setUploadQueue] = useState<string[]>([]);
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [isMobileComposer, setIsMobileComposer] = useState(false);
 
-const [localStorageInput, setLocalStorageInput] = useLocalStorage(
-  "input",
-  ""
-);
+  const [localStorageInput, setLocalStorageInput] = useLocalStorage(
+    "input",
+    ""
+  );
 
-useEffect(() => {
-  if (!hasAutoFocused.current && width) {
-    const timer = setTimeout(() => {
-      textareaRef.current?.focus();
-      hasAutoFocused.current = true;
-    }, 100);
-    return () => clearTimeout(timer);
-  }
-}, [width]);
+  useEffect(() => {
+    if (!hasAutoFocused.current && width) {
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+        hasAutoFocused.current = true;
+      }, 100);
 
-useEffect(() => {
-  const mediaQuery = window.matchMedia("(max-width: 639px)");
+      return () => clearTimeout(timer);
+    }
+  }, [width]);
 
-  const updateIsMobileComposer = () => {
-    setIsMobileComposer(mediaQuery.matches);
-  };
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
 
-  updateIsMobileComposer();
-  mediaQuery.addEventListener("change", updateIsMobileComposer);
+    const updateIsMobileComposer = () => {
+      setIsMobileComposer(mediaQuery.matches);
+    };
 
-  return () => {
-    mediaQuery.removeEventListener("change", updateIsMobileComposer);
-  };
-}, []);
+    updateIsMobileComposer();
+    mediaQuery.addEventListener("change", updateIsMobileComposer);
 
-const composerPlaceholder = editingMessage
-  ? "Revise your negotiation message..."
-  : isMobileComposer
-    ? "Present your IQF offer."
-    : "You are an EGYPTIAN IQF STRAWBERRY SUPPLIER. Present your offer to a FRENCH JAM MANUFACTURER buying HIGH VOLUMES.";
+    return () => {
+      mediaQuery.removeEventListener("change", updateIsMobileComposer);
+    };
+  }, []);
 
-useEffect(() => {
-  if (!input && localStorageInput?.trim()) {
-    setInput(localStorageInput);
-  }
-}, [input, localStorageInput, setInput]);
+  const composerPlaceholder = editingMessage
+    ? "Revise your negotiation message..."
+    : isMobileComposer
+      ? "Present your IQF offer."
+      : "You are an EGYPTIAN IQF STRAWBERRY SUPPLIER. Present your offer to a FRENCH JAM MANUFACTURER buying HIGH VOLUMES.";
 
-useEffect(() => {
-  setLocalStorageInput(input);
-}, [input, setLocalStorageInput]);
+  useEffect(() => {
+    if (!input && localStorageInput?.trim()) {
+      setInput(localStorageInput);
+    }
+  }, [input, localStorageInput, setInput]);
+
+  useEffect(() => {
+    setLocalStorageInput(input);
+  }, [input, setLocalStorageInput]);
+
+  const handleInput = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const val = event.target.value;
     setInput(val);
 
@@ -180,6 +180,7 @@ useEffect(() => {
   const handleSlashSelect = (cmd: SlashCommand) => {
     setSlashOpen(false);
     setInput("");
+
     switch (cmd.action) {
       case "new":
         router.push("/");
@@ -251,7 +252,7 @@ useEffect(() => {
           mediaType: attachment.contentType,
         })),
         {
-          type: "text",
+          type: "text" as const,
           text: input,
         },
       ],
@@ -265,14 +266,14 @@ useEffect(() => {
       textareaRef.current?.focus();
     }
   }, [
-    input,
-    setInput,
     attachments,
+    chatId,
+    input,
     sendMessage,
     setAttachments,
+    setInput,
     setLocalStorageInput,
     width,
-    chatId,
   ]);
 
   const uploadFile = useCallback(async (file: File) => {
@@ -296,12 +297,15 @@ useEffect(() => {
           url,
           name: pathname,
           contentType,
-        };
+        } satisfies Attachment;
       }
+
       const { error } = await response.json();
       toast.error(error);
-    } catch (_error) {
+      return undefined;
+    } catch {
       toast.error("Failed to upload file, please try again!");
+      return undefined;
     }
   }, []);
 
@@ -315,14 +319,14 @@ useEffect(() => {
         const uploadPromises = files.map((file) => uploadFile(file));
         const uploadedAttachments = await Promise.all(uploadPromises);
         const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) => attachment !== undefined
+          (attachment): attachment is Attachment => attachment !== undefined
         );
 
         setAttachments((currentAttachments) => [
           ...currentAttachments,
           ...successfullyUploadedAttachments,
         ]);
-      } catch (_error) {
+      } catch {
         toast.error("Failed to upload files");
       } finally {
         setUploadQueue([]);
@@ -347,7 +351,6 @@ useEffect(() => {
       }
 
       event.preventDefault();
-
       setUploadQueue((prev) => [...prev, "Pasted image"]);
 
       try {
@@ -358,17 +361,14 @@ useEffect(() => {
 
         const uploadedAttachments = await Promise.all(uploadPromises);
         const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) =>
+          (attachment): attachment is Attachment =>
             attachment !== undefined &&
             attachment.url !== undefined &&
             attachment.contentType !== undefined
         );
 
-        setAttachments((curr) => [
-          ...curr,
-          ...(successfullyUploadedAttachments as Attachment[]),
-        ]);
-      } catch (_error) {
+        setAttachments((curr) => [...curr, ...successfullyUploadedAttachments]);
+      } catch {
         toast.error("Failed to upload pasted image(s)");
       } finally {
         setUploadQueue([]);
@@ -437,7 +437,6 @@ useEffect(() => {
         )}
       </div>
 
-
       <PromptInput
         className="[&>div]:rounded-2xl [&>div]:border [&>div]:border-border/50 [&>div]:bg-card/80 [&>div]:shadow-[var(--shadow-composer)] [&>div]:backdrop-blur [&>div]:transition-all [&>div]:duration-300 [&>div]:focus-within:border-foreground/20 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
         onSubmit={() => {
@@ -449,9 +448,11 @@ useEffect(() => {
             }
             return;
           }
+
           if (!input.trim() && attachments.length === 0) {
             return;
           }
+
           if (status === "ready" || status === "error") {
             submitForm();
           } else {
@@ -502,16 +503,19 @@ useEffect(() => {
               const filtered = slashCommands.filter((cmd) =>
                 cmd.name.startsWith(slashQuery.toLowerCase())
               );
+
               if (e.key === "ArrowDown") {
                 e.preventDefault();
                 setSlashIndex((i) => Math.min(i + 1, filtered.length - 1));
                 return;
               }
+
               if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSlashIndex((i) => Math.max(i - 1, 0));
                 return;
               }
+
               if (e.key === "Enter" || e.key === "Tab") {
                 e.preventDefault();
                 if (filtered[slashIndex]) {
@@ -519,12 +523,14 @@ useEffect(() => {
                 }
                 return;
               }
+
               if (e.key === "Escape") {
                 e.preventDefault();
                 setSlashOpen(false);
                 return;
               }
             }
+
             if (e.key === "Escape" && editingMessage && onCancelEdit) {
               e.preventDefault();
               onCancelEdit();
@@ -556,7 +562,7 @@ useEffect(() => {
                 "h-8 w-8 rounded-xl transition-all duration-200",
                 input.trim()
                   ? "bg-foreground text-background hover:opacity-85 active:scale-95"
-                  : "bg-muted text-muted-foreground/25 cursor-not-allowed"
+                  : "cursor-not-allowed bg-muted text-muted-foreground/25"
               )}
               data-testid="send-button"
               disabled={!input.trim() || uploadQueue.length > 0}
@@ -629,7 +635,7 @@ function PureAttachmentsButton({
         "h-7 w-7 rounded-lg border border-border/40 p-1 transition-colors",
         hasVision
           ? "text-foreground hover:border-border hover:text-foreground"
-          : "text-muted-foreground/30 cursor-not-allowed"
+          : "cursor-not-allowed text-muted-foreground/30"
       )}
       data-testid="attachments-button"
       disabled={status !== "ready" || !hasVision}
@@ -654,6 +660,7 @@ function PureModelSelectorCompact({
   onModelChange?: (modelId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+
   const { data: modelsData } = useSWR(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
     (url: string) => fetch(url).then((r) => r.json()),
@@ -669,6 +676,7 @@ function PureModelSelectorCompact({
     activeModels.find((m: ChatModel) => m.id === selectedModelId) ??
     activeModels.find((m: ChatModel) => m.id === DEFAULT_CHAT_MODEL) ??
     activeModels[0];
+
   const [provider] = selectedModel.id.split("/");
 
   return (
@@ -683,6 +691,7 @@ function PureModelSelectorCompact({
           <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
         </Button>
       </ModelSelectorTrigger>
+
       <ModelSelectorContent>
         <ModelSelectorInput placeholder="Search models..." />
         <ModelSelectorList>
@@ -699,14 +708,20 @@ function PureModelSelectorCompact({
               string,
               { model: ChatModel; curated: boolean }[]
             > = {};
+
             for (const model of allModels) {
               const key = curatedIds.has(model.id)
                 ? "_available"
                 : model.provider;
+
               if (!grouped[key]) {
                 grouped[key] = [];
               }
-              grouped[key].push({ model, curated: curatedIds.has(model.id) });
+
+              grouped[key].push({
+                model,
+                curated: curatedIds.has(model.id),
+              });
             }
 
             const sortedKeys = Object.keys(grouped).sort((a, b) => {
@@ -755,22 +770,25 @@ function PureModelSelectorCompact({
               >
                 {grouped[key].map(({ model, curated }) => {
                   const logoProvider = model.id.split("/")[0];
+
                   return (
                     <ModelSelectorItem
                       className={cn(
                         "flex w-full",
                         model.id === selectedModel.id &&
                           "border-b border-dashed border-foreground/50",
-                        !curated && "opacity-40 cursor-default"
+                        !curated && "cursor-default opacity-40"
                       )}
                       key={model.id}
                       onSelect={() => {
                         if (!curated) {
                           return;
                         }
+
                         onModelChange?.(model.id);
                         setCookie("chat-model", model.id);
                         setOpen(false);
+
                         setTimeout(() => {
                           document
                             .querySelector<HTMLTextAreaElement>(
@@ -783,6 +801,7 @@ function PureModelSelectorCompact({
                     >
                       <ModelSelectorLogo provider={logoProvider} />
                       <ModelSelectorName>{model.name}</ModelSelectorName>
+
                       <div className="ml-auto flex items-center gap-2 text-foreground/70">
                         {capabilities?.[model.id]?.tools && (
                           <WrenchIcon className="size-3.5" />
@@ -820,7 +839,7 @@ function PureStopButton({
 }) {
   return (
     <Button
-      className="h-7 w-7 rounded-xl bg-foreground p-1 text-background transition-all duration-200 hover:opacity-85 active:scale-95 disabled:bg-muted disabled:text-muted-foreground/25 disabled:cursor-not-allowed"
+      className="h-7 w-7 rounded-xl bg-foreground p-1 text-background transition-all duration-200 hover:opacity-85 active:scale-95 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground/25"
       data-testid="stop-button"
       onClick={(event) => {
         event.preventDefault();
