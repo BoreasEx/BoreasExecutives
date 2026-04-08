@@ -61,65 +61,72 @@ function PureMessages({
 
   return (
     <div className="relative flex-1 bg-background">
-      {messages.length === 0 && !isLoading && (
+    {messages.length === 0 && !isLoading && (
   <div className="absolute inset-0 z-10 flex items-center justify-center px-4 sm:px-6">
-    <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-6 sm:p-8 md:p-10 shadow-[var(--shadow-float)] backdrop-blur">
-      
-      <div className="mb-6 flex flex-col items-center text-center md:mb-7 md:flex-row md:items-center md:gap-5 md:text-left">
+    <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-4 sm:p-6 md:p-10 shadow-[var(--shadow-float)] backdrop-blur">
+      <div className="mb-4 flex flex-col items-center text-center md:mb-7 md:flex-row md:items-center md:gap-5 md:text-left">
         <img
           src="/boreas-executives-logo.png"
           alt="Boreas Executives"
-          className="mb-4 h-16 w-auto max-w-[180px] object-contain shrink-0 md:mb-0 md:h-24 md:max-w-[220px]"
+          className="mb-3 h-14 w-auto max-w-[160px] shrink-0 object-contain md:mb-0 md:h-24 md:max-w-[220px]"
         />
         <div className="min-w-0">
-          <h1 className="text-3xl leading-tight font-semibold tracking-tight text-foreground sm:text-4xl md:text-2xl">
-  Boreas Executives
-</h1>
-          <p className="mt-2 text-base leading-relaxed text-muted-foreground md:text-base">
+          <h1 className="text-[2rem] leading-tight font-semibold tracking-tight text-foreground sm:text-4xl md:text-2xl">
+            Boreas Executives
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground md:text-base">
             AI-powered IQF fruits negotiation simulator
           </p>
         </div>
       </div>
 
-    <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-4 sm:p-6 md:p-10 shadow-[var(--shadow-float)] backdrop-blur">
-  <div className="mb-4 flex flex-col items-center text-center md:mb-7 md:flex-row md:items-center md:gap-5 md:text-left">
-    <img
-      src="/boreas-executives-logo.png"
-      alt="Boreas Executives"
-      className="mb-3 h-14 w-auto max-w-[160px] object-contain shrink-0 md:mb-0 md:h-24 md:max-w-[220px]"
-    />
-    <div className="min-w-0">
-      <h1 className="text-[2rem] leading-tight font-semibold tracking-tight text-foreground sm:text-4xl md:text-2xl">
-        Boreas Executives
-      </h1>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground md:text-base">
-        AI-powered IQF fruits negotiation simulator
-      </p>
+      <div className="space-y-2 md:hidden">
+        <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
+          <span className="font-semibold text-foreground">Product:</span>
+          <span className="ml-2 break-words text-foreground/75">IQF STRAWBERRIES</span>
+        </div>
+        <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
+          <span className="font-semibold text-foreground">Origin:</span>
+          <span className="ml-2 break-words text-foreground/75">EGYPT</span>
+        </div>
+        <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
+          <span className="font-semibold text-foreground">Buyer:</span>
+          <span className="ml-2 break-words text-foreground/75">FRENCH JAM MANUFACTURER</span>
+        </div>
+        <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
+          <span className="font-semibold text-foreground">Style:</span>
+          <span className="ml-2 break-words text-foreground/75">
+            DEMANDING, CONCISE, RISK-FOCUSED
+          </span>
+        </div>
+      </div>
+
+      <div className="hidden md:block">
+        <p className="mx-auto max-w-3xl text-center text-sm leading-6 uppercase tracking-[0.08em] text-foreground/80 md:text-[15px]">
+          <span className="font-semibold text-foreground">Product:</span>
+          <span className="ml-1 text-foreground/75">IQF STRAWBERRIES</span>
+
+          <span className="mx-4 text-foreground/30">|</span>
+
+          <span className="font-semibold text-foreground">Origin:</span>
+          <span className="ml-1 text-foreground/75">EGYPT</span>
+
+          <span className="mx-4 text-foreground/30">|</span>
+
+          <span className="font-semibold text-foreground">Buyer:</span>
+          <span className="ml-1 text-foreground/75">FRENCH JAM MANUFACTURER</span>
+
+          <span className="mx-4 text-foreground/30">|</span>
+
+          <span className="font-semibold text-foreground">Style:</span>
+          <span className="ml-1 text-foreground/75">
+            DEMANDING, CONCISE, RISK-FOCUSED
+          </span>
+        </p>
+      </div>
     </div>
   </div>
-
-  <div className="space-y-2 md:hidden">
-    <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
-      <span className="font-semibold text-foreground">Product:</span>
-      <span className="ml-2 text-foreground/75 break-words">IQF STRAWBERRIES</span>
-    </div>
-    <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
-      <span className="font-semibold text-foreground">Origin:</span>
-      <span className="ml-2 text-foreground/75 break-words">EGYPT</span>
-    </div>
-    <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
-      <span className="font-semibold text-foreground">Buyer:</span>
-      <span className="ml-2 text-foreground/75 break-words">FRENCH JAM MANUFACTURER</span>
-    </div>
-    <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
-      <span className="font-semibold text-foreground">Style:</span>
-      <span className="ml-2 text-foreground/75 break-words">
-        DEMANDING, CONCISE, RISK-FOCUSED
-      </span>
-    </div>
-  </div>  </div>
-)}
-      <div
+)}      <div
         className={cn(
           "absolute inset-0 touch-pan-y overflow-y-auto",
           messages.length > 0 ? "bg-background" : "bg-transparent"
