@@ -220,7 +220,7 @@ function PureMultimodalInput({
     ? "Revise your negotiation message..."
     : width && width < 640
       ? "Present your offer."
-      : "You are an EGYPTIAN IQF STRAWBERRY SUPPLIER. Present your offer to a FRENCH JAM MANUFACTURER buying HIGH VOLUMES.";
+      : "Test.";
 
   const submitForm = useCallback(() => {
     window.history.pushState(
