@@ -83,23 +83,23 @@ function PureMessages({
             <div className="space-y-4">
               <p className="mx-auto max-w-3xl text-center text-sm md:text-[15px] leading-6 uppercase tracking-[0.08em] text-foreground/80">
                 <span className="font-semibold text-foreground">Product:</span>
-                <span className="ml-1 text-foreground/95">IQF strawberries</span>
+                <span className="ml-1 text-foreground/75">IQF STRAWBERRIES</span>
 
-                <span className="mx-3 text-foreground/30">|</span>
+                <span className="mx-4 text-foreground/30">|</span>
 
                 <span className="font-semibold text-foreground">Origin:</span>
-                <span className="ml-1 text-foreground/95">Egypt</span>
+                <span className="ml-1 text-foreground/75">EGYPT</span>
 
-                <span className="mx-3 text-foreground/30">|</span>
+                <span className="mx-4 text-foreground/30">|</span>
 
                 <span className="font-semibold text-foreground">Buyer:</span>
-                <span className="ml-1 text-foreground/95">French Jam manufacturer</span>
+                <span className="ml-1 text-foreground/75">FRENCH JAM MANUFACTURER</span>
 
-                <span className="mx-3 text-foreground/30">|</span>
+                <span className="mx-4 text-foreground/30">|</span>
 
                 <span className="font-semibold text-foreground">Style:</span>
-                <span className="ml-1 text-foreground/95">
-                  demanding, concise, risk-focused
+                <span className="ml-1 text-foreground/75">
+                  DEMANDING, CONCISE, RISK-FOCUSED
                 </span>
               </p>
             </div>
