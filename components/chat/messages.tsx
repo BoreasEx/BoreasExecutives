@@ -68,7 +68,7 @@ function PureMessages({
               <img
                 src="/boreas-executives-logo.png"
                 alt="Boreas Executives"
-                className="h-16 w-16 md:h-20 md:w-20 object-contain shrink-0"
+                className="h-18 w-18 md:h-24 md:w-24 object-contain shrink-0"
               />
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight text-foreground">
