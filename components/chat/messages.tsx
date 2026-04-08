@@ -80,26 +80,7 @@ function PureMessages({
         </div>
       </div>
 
-      <div className="space-y-2 md:hidden">
-        <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
-          <span className="font-semibold text-foreground">Product:</span>
-          <span className="ml-2 break-words text-foreground/75">IQF STRAWBERRIES</span>
-        </div>
-        <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
-          <span className="font-semibold text-foreground">Origin:</span>
-          <span className="ml-2 break-words text-foreground/75">EGYPT</span>
-        </div>
-        <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
-          <span className="font-semibold text-foreground">Buyer:</span>
-          <span className="ml-2 break-words text-foreground/75">FRENCH JAM MANUFACTURER</span>
-        </div>
-        <div className="text-[13px] leading-5 uppercase tracking-[0.06em]">
-          <span className="font-semibold text-foreground">Style:</span>
-          <span className="ml-2 break-words text-foreground/75">
-            DEMANDING, CONCISE, RISK-FOCUSED
-          </span>
-        </div>
-      </div>
+
 
       <div className="hidden md:block">
         <p className="mx-auto max-w-3xl text-center text-sm leading-6 uppercase tracking-[0.08em] text-foreground/80 md:text-[15px]">
