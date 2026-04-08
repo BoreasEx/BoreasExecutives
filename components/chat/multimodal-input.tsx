@@ -473,7 +473,7 @@ function PureMultimodalInput({
           </div>
         )}
 <PromptInputTextarea
-  className="min-h-28 px-5 pt-4 pb-2 text-[13px] leading-relaxed text-foreground placeholder:text-foreground/45"
+  className="min-h-28 px-5 pt-4 pb-2 text-[13px] leading-relaxed text-foreground placeholder:text-foreground/50"
           data-testid="multimodal-input"
           onChange={handleInput}
           onKeyDown={(e) => {
