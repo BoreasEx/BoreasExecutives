@@ -61,39 +61,53 @@ function PureMessages({
 
   return (
     <div className="relative flex-1 bg-background">
-    {messages.length === 0 && !isLoading && (
-  <div className="absolute inset-0 z-10 flex items-center justify-center px-6">
-    <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-8 shadow-[var(--shadow-float)] backdrop-blur">
-      <div className="mb-6 flex items-center gap-4">
-        <img
-          src="/boreas-executives-logo.png"
-          alt="Boreas Executives"
-          className="h-12 w-12 object-contain"
-        />
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Boreas Executives
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            AI-powered IQF fruits negotiation simulator
-          </p>
-        </div>
-      </div>
+      {messages.length === 0 && !isLoading && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center px-6">
+          <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-8 md:p-10 shadow-[var(--shadow-float)] backdrop-blur">
+            <div className="mb-7 flex items-center gap-5">
+              <img
+                src="/boreas-executives-logo.png"
+                alt="Boreas Executives"
+                className="h-16 w-16 md:h-20 md:w-20 object-contain shrink-0"
+              />
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                  Boreas Executives
+                </h1>
+                <p className="mt-1 text-sm md:text-base text-muted-foreground">
+                  AI-powered IQF fruits negotiation simulator
+                </p>
+              </div>
+            </div>
 
-<div className="space-y-4">
-  <p className="text-xs uppercase tracking-wider text-muted-foreground text-center max-w-3xl mx-auto">
-    <span className="text-foreground font-medium">Product:</span> IQF strawberries
-    <span className="mx-2 opacity-40">|</span>
-    <span className="text-foreground font-medium">Origin:</span> Egypt
-    <span className="mx-2 opacity-40">|</span>
-    <span className="text-foreground font-medium">Buyer:</span> French Jam manufacturer
-    <span className="mx-2 opacity-40">|</span>
-    <span className="text-foreground font-medium">Style:</span> demanding, concise, risk-focused
-  </p>
-</div>
-    </div>
-  </div>
-)}      <div
+            <div className="space-y-4">
+              <p className="mx-auto max-w-3xl text-center text-sm md:text-[15px] leading-6 uppercase tracking-[0.08em] text-foreground/80">
+                <span className="font-semibold text-foreground">Product:</span>
+                <span className="ml-1 text-foreground/95">IQF strawberries</span>
+
+                <span className="mx-3 text-foreground/30">|</span>
+
+                <span className="font-semibold text-foreground">Origin:</span>
+                <span className="ml-1 text-foreground/95">Egypt</span>
+
+                <span className="mx-3 text-foreground/30">|</span>
+
+                <span className="font-semibold text-foreground">Buyer:</span>
+                <span className="ml-1 text-foreground/95">French Jam manufacturer</span>
+
+                <span className="mx-3 text-foreground/30">|</span>
+
+                <span className="font-semibold text-foreground">Style:</span>
+                <span className="ml-1 text-foreground/95">
+                  demanding, concise, risk-focused
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div
         className={cn(
           "absolute inset-0 touch-pan-y overflow-y-auto",
           messages.length > 0 ? "bg-background" : "bg-transparent"
@@ -137,19 +151,19 @@ function PureMessages({
         </div>
       </div>
 
-<button
-  aria-label="Scroll to bottom"
-  className={`absolute bottom-5 left-1/2 z-10 flex h-8 -translate-x-1/2 items-center gap-2 rounded-full border border-border/50 bg-card/90 px-4 text-[11px] text-muted-foreground shadow-[var(--shadow-float)] backdrop-blur-lg transition-all duration-200 ${
-    isAtBottom
-      ? "pointer-events-none scale-90 opacity-0"
-      : "pointer-events-auto scale-100 opacity-100 hover:text-foreground"
-  }`}
-  onClick={() => scrollToBottom("smooth")}
-  type="button"
->
-  <ArrowDownIcon className="size-3" />
-  <span>Latest exchange</span>
-</button>
+      <button
+        aria-label="Scroll to bottom"
+        className={`absolute bottom-5 left-1/2 z-10 flex h-8 -translate-x-1/2 items-center gap-2 rounded-full border border-border/50 bg-card/90 px-4 text-[11px] text-muted-foreground shadow-[var(--shadow-float)] backdrop-blur-lg transition-all duration-200 ${
+          isAtBottom
+            ? "pointer-events-none scale-90 opacity-0"
+            : "pointer-events-auto scale-100 opacity-100 hover:text-foreground"
+        }`}
+        onClick={() => scrollToBottom("smooth")}
+        type="button"
+      >
+        <ArrowDownIcon className="size-3" />
+        <span>Latest exchange</span>
+      </button>
     </div>
   );
 }
