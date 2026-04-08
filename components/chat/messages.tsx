@@ -61,7 +61,7 @@ function PureMessages({
 
   return (
     <div className="relative flex-1 bg-background">
-     {messages.length === 0 && !isLoading && (
+    {messages.length === 0 && !isLoading && (
   <div className="absolute inset-0 z-10 flex items-center justify-center px-6">
     <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-8 shadow-[var(--shadow-float)] backdrop-blur">
       <div className="mb-6 flex items-center gap-4">
@@ -80,26 +80,23 @@ function PureMessages({
         </div>
       </div>
 
-      <div className="space-y-3">
-        <p className="text-sm text-foreground/90">
-          Simulation context: industrial procurement negotiation
+      <div className="space-y-4">
+        <p className="mx-auto max-w-2xl text-center text-sm leading-relaxed text-foreground/90">
+          Simulation context: industrial procurement negotiation for{" "}
+          <strong>"IQF strawberries"</strong>, origin{" "}
+          <strong>"Egypt"</strong>. The buyer is a{" "}
+          <strong>"French Jam manufacturer"</strong>, the style of negotiation
+          is <strong>"demanding, concise risk focused"</strong>.
         </p>
-<div className="space-y-4">
-  <p className="text-sm text-foreground/90 text-center max-w-2xl mx-auto leading-relaxed">
-    Simulation context: industrial procurement negotiation for{" "}
-    <strong>"IQF strawberries"</strong>, origin{" "}
-    <strong>"Egypt"</strong>. The buyer is a{" "}
-    <strong>"French Jam manufacturer"</strong>, the style of negotiation is{" "}
-    <strong>"demanding, concise risk focused"</strong>.
-  </p>
 
-  <div className="pt-3 text-sm text-muted-foreground text-center max-w-xl mx-auto">
-    Start by presenting your offer. Boreas will respond as a strict industrial buyer.
+        <div className="mx-auto max-w-xl pt-3 text-center text-sm text-muted-foreground">
+          Start by presenting your offer. Boreas will respond as a strict
+          industrial buyer.
+        </div>
+      </div>
+    </div>
   </div>
-</div>   </div>
-  </div>
-)}
-      <div
+)}      <div
         className={cn(
           "absolute inset-0 touch-pan-y overflow-y-auto",
           messages.length > 0 ? "bg-background" : "bg-transparent"
