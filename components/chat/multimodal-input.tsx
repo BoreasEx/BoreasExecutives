@@ -473,7 +473,7 @@ function PureMultimodalInput({
           </div>
         )}
 <PromptInputTextarea
-  className="min-h-28 px-5 pt-4 pb-2 text-[13px] leading-relaxed text-foreground placeholder:text-muted-foreground/40"
+  className="min-h-28 px-5 pt-4 pb-2 text-[13px] leading-relaxed text-foreground placeholder:text-foreground/45"
           data-testid="multimodal-input"
           onChange={handleInput}
           onKeyDown={(e) => {
@@ -512,7 +512,7 @@ function PureMultimodalInput({
 placeholder={
   editingMessage
     ? "Revise your negotiation message..."
-    : "You are an Egyptian IQF strawberry supplier. Present your offer to a high-volume French jam manufacturer."
+    : "You are an Egyptian IQF strawberry supplier. Present your offer to a French jam manufacturer buying high volumes."
 }
           ref={textareaRef}
           value={input}
