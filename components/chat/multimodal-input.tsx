@@ -128,13 +128,11 @@ function PureMultimodalInput({
     ""
   );
 
-// useEffect(() => {
-//   if (textareaRef.current) {
-//     const domValue = textareaRef.current.value;
-//     const finalValue = domValue || localStorageInput || "";
-//     setInput(finalValue);
-//   }
-// }, [localStorageInput, setInput]);
+useEffect(() => {
+  if (!input && localStorageInput) {
+    setInput(localStorageInput);
+  }
+}, [input, localStorageInput, setInput]);
 
   useEffect(() => {
     setLocalStorageInput(input);
@@ -220,7 +218,7 @@ function PureMultimodalInput({
     ? "Revise your negotiation message..."
     : width && width < 640
       ? "Present your offer."
-      : "Test.";
+      : "You are an EGYPTIAN IQF STRAWBERRY SUPPLIER. Present your offer to a FRENCH JAM MANUFACTURER buying HIGH VOLUMES.";
 
   const submitForm = useCallback(() => {
     window.history.pushState(
