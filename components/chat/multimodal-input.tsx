@@ -151,7 +151,7 @@ function PureMultimodalInput({
   const composerPlaceholder = editingMessage
     ? "Revise your negotiation message..."
     : isMobileComposer
-      ? "Present your IQF offer."
+      ? "You are an Egyptian IQF Strawberry negotiating with a French jam manufacturer"
       : "You are an EGYPTIAN IQF STRAWBERRY SUPPLIER. Present your offer to a FRENCH JAM MANUFACTURER buying HIGH VOLUMES.";
 
   useEffect(() => {
