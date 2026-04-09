@@ -109,6 +109,7 @@ function PureMultimodalInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasAutoFocused = useRef(false);
+  const hasRestoredDraft = useRef(false);
   const { width } = useWindowSize();
 
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
@@ -117,7 +118,7 @@ function PureMultimodalInput({
   const [slashIndex, setSlashIndex] = useState(0);
   const [isMobileComposer, setIsMobileComposer] = useState(false);
 
-  const [localStorageInput, setLocalStorageInput] = useLocalStorage(
+  const [localStorageInput, setLocalStorageInput] = useLocalStorage<string>(
     "input",
     ""
   );
@@ -155,12 +156,17 @@ function PureMultimodalInput({
       : "Hello, I am a jam processor sourcing large volumes of Egyptian IQF strawberries. Please present your offer.";
 
   useEffect(() => {
-    if (!input && localStorageInput?.trim()) {
+    if (hasRestoredDraft.current) return;
+
+    if (localStorageInput !== "") {
       setInput(localStorageInput);
     }
-  }, [input, localStorageInput, setInput]);
+
+    hasRestoredDraft.current = true;
+  }, [localStorageInput, setInput]);
 
   useEffect(() => {
+    if (!hasRestoredDraft.current) return;
     setLocalStorageInput(input);
   }, [input, setLocalStorageInput]);
 
@@ -179,18 +185,24 @@ function PureMultimodalInput({
 
   const handleSlashSelect = (cmd: SlashCommand) => {
     setSlashOpen(false);
-    setInput("");
 
     switch (cmd.action) {
       case "new":
+        setInput("");
+        setLocalStorageInput("");
         router.push("/");
         break;
+
       case "clear":
         setMessages(() => []);
+        setInput("");
+        setLocalStorageInput("");
         break;
+
       case "rename":
         toast("Rename is available from the sidebar chat menu.");
         break;
+
       case "model": {
         const modelBtn = document.querySelector<HTMLButtonElement>(
           "[data-testid='model-selector']"
@@ -198,14 +210,18 @@ function PureMultimodalInput({
         modelBtn?.click();
         break;
       }
+
       case "theme":
         setTheme(resolvedTheme === "dark" ? "light" : "dark");
         break;
+
       case "delete":
         toast("Delete this chat?", {
           action: {
             label: "Delete",
             onClick: () => {
+              setInput("");
+              setLocalStorageInput("");
               fetch(
                 `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat?id=${chatId}`,
                 { method: "DELETE" }
@@ -216,11 +232,14 @@ function PureMultimodalInput({
           },
         });
         break;
+
       case "purge":
         toast("Delete all chats?", {
           action: {
             label: "Delete all",
             onClick: () => {
+              setInput("");
+              setLocalStorageInput("");
               fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`, {
                 method: "DELETE",
               });
@@ -230,6 +249,7 @@ function PureMultimodalInput({
           },
         });
         break;
+
       default:
         break;
     }
