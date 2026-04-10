@@ -1,3 +1,4 @@
+import { validateSupplierName } from "@/lib/suppliers";
 import { geolocation, ipAddress } from "@vercel/functions";
 import {
   convertToModelMessages,
@@ -55,6 +56,20 @@ function getStreamContext() {
 }
 
 export { getStreamContext };
+
+function extractTextFromParts(
+  parts: Array<Record<string, unknown>> | undefined
+): string {
+  if (!parts || !Array.isArray(parts)) {
+    return "";
+  }
+
+  return parts
+    .filter((part) => part?.type === "text" && typeof part.text === "string")
+    .map((part) => String(part.text))
+    .join(" ")
+    .trim();
+}
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
@@ -186,12 +201,54 @@ export async function POST(request: Request) {
 
     const modelMessages = await convertToModelMessages(uiMessages);
 
+    // --- AJOUT : extraction du dernier message utilisateur ---
+    const lastUserMessageText =
+      message?.role === "user"
+        ? extractTextFromParts(
+            message.parts as Array<Record<string, unknown>> | undefined
+          )
+        : "";
+
+    const supplierValidation = validateSupplierName(lastUserMessageText);
+
+    let supplierContext = "";
+
+    if (lastUserMessageText) {
+      if (supplierValidation.status === "match") {
+        supplierContext = `SUPPLIER VALIDATION CONTEXT:
+- Supplier mention appears validated.
+- Closest validated supplier: ${supplierValidation.matchedName}
+- Confidence: ${supplierValidation.confidence}
+
+Instruction:
+Treat the supplier identity as plausible, but continue behaving as a strict industrial buyer. Do not become helpful.`;
+      } else if (supplierValidation.status === "uncertain") {
+        supplierContext = `SUPPLIER VALIDATION CONTEXT:
+- Supplier identity is uncertain.
+- Closest supplier found: ${supplierValidation.matchedName}
+- Confidence: ${supplierValidation.confidence}
+
+Instruction:
+Express doubt. Require the full legal entity name and formal confirmation of the exact producer identity before moving forward.`;
+      } else {
+        supplierContext = `SUPPLIER VALIDATION CONTEXT:
+- No credible supplier match found in the approved Egypt IQF supplier file.
+- Closest candidate found: ${supplierValidation.matchedName ?? "None"}
+- Confidence: ${supplierValidation.confidence}
+
+Instruction:
+Express serious doubt, suspend validation, and require documented justification and exact producer identification.`;
+      }
+    }
+
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
         const result = streamText({
           model: getLanguageModel(chatModel),
-          system: systemPrompt({ requestHints, supportsTools }),
+          system: `${systemPrompt({ requestHints, supportsTools })}
+
+${supplierContext}`,
           messages: modelMessages,
           stopWhen: stepCountIs(5),
           experimental_activeTools:
@@ -279,8 +336,8 @@ export async function POST(request: Request) {
         }
       },
       onError: () => {
-  return "Oops, an error occurred!";
-},
+        return "Oops, an error occurred!";
+      },
     });
 
     return createUIMessageStreamResponse({
