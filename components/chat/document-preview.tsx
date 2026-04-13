@@ -101,7 +101,7 @@ export function DocumentPreview({
 
   const document: Document | null = previewDocument
     ? previewDocument
-    : artifact.status === "streaming"
+    : artifact.status === "streaming" && artifact.kind !== "certification"
       ? {
           title: artifact.title,
           kind: artifact.kind,
@@ -113,6 +113,10 @@ export function DocumentPreview({
       : null;
 
   if (!document) {
+    if (artifact.kind === "certification") {
+      return null;
+    }
+
     return <LoadingSkeleton artifactKind={artifact.kind} />;
   }
 
@@ -169,19 +173,56 @@ const PureHitboxLayer = ({
     (event: MouseEvent<HTMLElement>) => {
       const boundingBox = event.currentTarget.getBoundingClientRect();
 
-      setArtifact((artifact) => ({
-        ...artifact,
-        ...(result?.id && { documentId: result.id }),
-        ...(result?.title && { title: result.title }),
-        ...(result?.kind && { kind: result.kind }),
-        isVisible: true,
-        boundingBox: {
-          left: boundingBox.x,
-          top: boundingBox.y,
-          width: boundingBox.width,
-          height: boundingBox.height,
-        },
-      }));
+      setArtifact((artifact) => {
+        const nextKind = result?.kind ?? artifact.kind;
+        const nextDocumentId = result?.id ?? artifact.documentId;
+        const nextTitle = result?.title ?? artifact.title;
+
+        if (nextKind === "certification") {
+          return {
+            title: nextTitle,
+            documentId: nextDocumentId,
+            kind: "certification",
+            content:
+              artifact.kind === "certification"
+                ? artifact.content
+                : {
+                    status: "borderline",
+                    scores: {
+                      offerStructure: 0,
+                      technicalDepth: 0,
+                      operationalCredibility: 0,
+                      buyerRiskReduction: 0,
+                    },
+                    verdict: "",
+                    weaknesses: [],
+                  },
+            isVisible: true,
+            status: artifact.status,
+            boundingBox: {
+              left: boundingBox.x,
+              top: boundingBox.y,
+              width: boundingBox.width,
+              height: boundingBox.height,
+            },
+          };
+        }
+
+        return {
+          title: nextTitle,
+          documentId: nextDocumentId,
+          kind: nextKind,
+          content: artifact.kind === "certification" ? "" : artifact.content,
+          isVisible: true,
+          status: artifact.status,
+          boundingBox: {
+            left: boundingBox.x,
+            top: boundingBox.y,
+            width: boundingBox.width,
+            height: boundingBox.height,
+          },
+        };
+      });
     },
     [setArtifact, result]
   );

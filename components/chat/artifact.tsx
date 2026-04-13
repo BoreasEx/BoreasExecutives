@@ -2,6 +2,7 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import { formatDistance } from "date-fns";
 import equal from "fast-deep-equal";
 import { AnimatePresence, motion } from "framer-motion";
+import { certificationArtifact } from "@/artifacts/certification/client";
 import {
   type Dispatch,
   memo,
@@ -34,14 +35,26 @@ export const artifactDefinitions = [
   codeArtifact,
   imageArtifact,
   sheetArtifact,
+  certificationArtifact,
 ];
+
 export type ArtifactKind = (typeof artifactDefinitions)[number]["kind"];
 
-export type UIArtifact = {
+export type CertificationContent = {
+  status: "fail" | "borderline" | "pass" | "strong_pass";
+  scores: {
+    offerStructure: number;
+    technicalDepth: number;
+    operationalCredibility: number;
+    buyerRiskReduction: number;
+  };
+  verdict: string;
+  weaknesses: string[];
+};
+
+type BaseArtifact = {
   title: string;
   documentId: string;
-  kind: ArtifactKind;
-  content: string;
   isVisible: boolean;
   status: "streaming" | "idle";
   boundingBox: {
@@ -51,6 +64,18 @@ export type UIArtifact = {
     height: number;
   };
 };
+
+type TextLikeArtifact = BaseArtifact & {
+  kind: Exclude<ArtifactKind, "certification">;
+  content: string;
+};
+
+export type CertificationArtifact = BaseArtifact & {
+  kind: "certification";
+  content: CertificationContent;
+};
+
+export type UIArtifact = TextLikeArtifact | CertificationArtifact;
 
 function PureArtifact({
   addToolApprovalResponse: _addToolApprovalResponse,
@@ -114,13 +139,17 @@ function PureArtifact({
       userScrolledArtifact.current = false;
       return;
     }
+
     if (userScrolledArtifact.current) {
       return;
     }
+
     const el = artifactContentRef.current;
+
     if (!el) {
       return;
     }
+
     el.scrollTo({ top: el.scrollHeight });
   }, [artifact.status]);
 
@@ -131,15 +160,23 @@ function PureArtifact({
       if (mostRecentDocument) {
         setDocument(mostRecentDocument);
         setCurrentVersionIndex(documents.length - 1);
-        if (artifact.status === "streaming" || !isContentDirty) {
-          setArtifact((currentArtifact) => ({
-            ...currentArtifact,
-            content: mostRecentDocument.content ?? "",
-          }));
+
+        if (
+          (artifact.status === "streaming" || !isContentDirty) &&
+          artifact.kind !== "certification"
+        ) {
+          setArtifact((currentArtifact) =>
+            currentArtifact.kind === "certification"
+              ? currentArtifact
+              : {
+                  ...currentArtifact,
+                  content: mostRecentDocument.content ?? "",
+                }
+          );
         }
       }
     }
-  }, [documents, setArtifact, artifact.status, isContentDirty]);
+  }, [documents, setArtifact, artifact.status, artifact.kind, isContentDirty]);
 
   useEffect(() => {
     mutateDocuments();
@@ -150,6 +187,10 @@ function PureArtifact({
   const handleContentChange = useCallback(
     (updatedContent: string) => {
       if (!artifact) {
+        return;
+      }
+
+      if (artifact.kind === "certification") {
         return;
       }
 
@@ -228,9 +269,11 @@ function PureArtifact({
     if (!documents) {
       return "";
     }
+
     if (!documents[index]) {
       return "";
     }
+
     return documents[index].content ?? "";
   }
 
@@ -305,6 +348,11 @@ function PureArtifact({
       )
       .join("\n") || undefined;
 
+  const displayedContent =
+    isCurrentVersion || artifact.kind !== "certification"
+      ? artifact.content
+      : getDocumentContentById(currentVersionIndex);
+
   const artifactPanel = (
     <>
       {sidebarState !== "collapsed" && (
@@ -350,26 +398,29 @@ function PureArtifact({
         data-slot="artifact-content"
         onScroll={() => {
           const el = artifactContentRef.current;
+
           if (!el) {
             return;
           }
+
           const atBottom =
             el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+
           userScrolledArtifact.current = !atBottom;
         }}
         ref={artifactContentRef}
       >
         <artifactDefinition.content
-          content={
-            isCurrentVersion
-              ? artifact.content
-              : getDocumentContentById(currentVersionIndex)
-          }
+          content={displayedContent as never}
           currentVersionIndex={currentVersionIndex}
           getDocumentContentById={getDocumentContentById}
           isCurrentVersion={isCurrentVersion}
           isInline={false}
-          isLoading={isDocumentsFetching && !artifact.content}
+          isLoading={
+            isDocumentsFetching &&
+            artifact.kind !== "certification" &&
+            !artifact.content
+          }
           metadata={metadata}
           mode={mode}
           onSaveContent={saveContent}
@@ -465,15 +516,19 @@ export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
   if (prevProps.status !== nextProps.status) {
     return false;
   }
+
   if (!equal(prevProps.votes, nextProps.votes)) {
     return false;
   }
+
   if (prevProps.input !== nextProps.input) {
     return false;
   }
+
   if (prevProps.messages.length !== nextProps.messages.length) {
     return false;
   }
+
   if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {
     return false;
   }

@@ -55,15 +55,45 @@ function PureDocumentToolResult({
           height: rect.height,
         };
 
-        setArtifact((currentArtifact) => ({
-          documentId: result.id,
-          kind: result.kind,
-          content: currentArtifact.content,
-          title: result.title,
-          isVisible: true,
-          status: "idle",
-          boundingBox,
-        }));
+        setArtifact((currentArtifact) => {
+          if (result.kind === "certification") {
+            return {
+              documentId: result.id,
+              kind: "certification",
+              content:
+                currentArtifact.kind === "certification"
+                  ? currentArtifact.content
+                  : {
+                      status: "borderline",
+                      scores: {
+                        offerStructure: 0,
+                        technicalDepth: 0,
+                        operationalCredibility: 0,
+                        buyerRiskReduction: 0,
+                      },
+                      verdict: "",
+                      weaknesses: [],
+                    },
+              title: result.title,
+              isVisible: true,
+              status: "idle",
+              boundingBox,
+            };
+          }
+
+          return {
+            documentId: result.id,
+            kind: result.kind,
+            content:
+              currentArtifact.kind === "certification"
+                ? ""
+                : currentArtifact.content,
+            title: result.title,
+            isVisible: true,
+            status: "idle",
+            boundingBox,
+          };
+        });
       }}
       type="button"
     >

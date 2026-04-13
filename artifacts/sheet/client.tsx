@@ -18,12 +18,21 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
   initialize: () => null,
   onStreamPart: ({ setArtifact, streamPart }) => {
     if (streamPart.type === "data-sheetDelta") {
-      setArtifact((draftArtifact) => ({
-        ...draftArtifact,
-        content: streamPart.data,
-        isVisible: true,
-        status: "streaming",
-      }));
+      setArtifact((draftArtifact) => {
+        if (draftArtifact.kind === "certification") {
+          return draftArtifact;
+        }
+
+        return {
+          title: draftArtifact.title,
+          documentId: draftArtifact.documentId,
+          kind: "sheet",
+          content: streamPart.data,
+          isVisible: true,
+          status: "streaming",
+          boundingBox: draftArtifact.boundingBox,
+        };
+      });
     }
   },
   content: ({ content, currentVersionIndex, onSaveContent, status }) => {

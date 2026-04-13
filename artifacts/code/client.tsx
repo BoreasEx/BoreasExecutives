@@ -22,11 +22,8 @@ const OUTPUT_HANDLERS = {
     import base64
     from matplotlib import pyplot as plt
 
-    # Clear any existing plots
     plt.clf()
     plt.close('all')
-
-    # Switch to agg backend
     plt.switch_backend('agg')
 
     def setup_matplotlib_output():
@@ -68,28 +65,43 @@ type Metadata = {
 
 export const codeArtifact = new Artifact<"code", Metadata>({
   kind: "code",
+
   description:
     "Useful for code generation; Code execution is only available for python code.",
+
   initialize: ({ setMetadata }) => {
     setMetadata({
       outputs: [],
     });
   },
+
   onStreamPart: ({ streamPart, setArtifact }) => {
     if (streamPart.type === "data-codeDelta") {
-      setArtifact((draftArtifact) => ({
-        ...draftArtifact,
-        content: streamPart.data,
-        isVisible:
-          draftArtifact.status === "streaming" &&
-          draftArtifact.content.length > 300 &&
-          draftArtifact.content.length < 310
-            ? true
-            : draftArtifact.isVisible,
-        status: "streaming",
-      }));
+      setArtifact((draftArtifact) => {
+        // 🔒 Protection critique
+        if (draftArtifact.kind === "certification") {
+          return draftArtifact;
+        }
+
+        return {
+          title: draftArtifact.title,
+          documentId: draftArtifact.documentId,
+          kind: "code",
+          content: streamPart.data,
+          isVisible:
+            draftArtifact.status === "streaming" &&
+            typeof draftArtifact.content === "string" &&
+            draftArtifact.content.length > 300 &&
+            draftArtifact.content.length < 310
+              ? true
+              : draftArtifact.isVisible,
+          status: "streaming",
+          boundingBox: draftArtifact.boundingBox,
+        };
+      });
     }
   },
+
   content: ({ metadata, setMetadata, ...props }) => {
     return (
       <>
@@ -111,6 +123,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
       </>
     );
   },
+
   actions: [
     {
       icon: <PlayIcon size={18} />,
@@ -133,7 +146,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
         }));
 
         try {
-          // @ts-expect-error - loadPyodide is not defined
+          // @ts-expect-error
           const currentPyodideInstance = await globalThis.loadPyodide({
             indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/",
           });
@@ -154,7 +167,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
               setMetadata((metadata) => ({
                 ...metadata,
                 outputs: [
-                  ...metadata.outputs.filter((output) => output.id !== runId),
+                  ...metadata.outputs.filter((o) => o.id !== runId),
                   {
                     id: runId,
                     contents: [{ type: "text", value: message }],
@@ -166,6 +179,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
           });
 
           const requiredHandlers = detectRequiredHandlers(content);
+
           for (const handler of requiredHandlers) {
             if (OUTPUT_HANDLERS[handler as keyof typeof OUTPUT_HANDLERS]) {
               await currentPyodideInstance.runPythonAsync(
@@ -185,7 +199,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
           setMetadata((metadata) => ({
             ...metadata,
             outputs: [
-              ...metadata.outputs.filter((output) => output.id !== runId),
+              ...metadata.outputs.filter((o) => o.id !== runId),
               {
                 id: runId,
                 contents: outputContent,
@@ -197,7 +211,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
           setMetadata((metadata) => ({
             ...metadata,
             outputs: [
-              ...metadata.outputs.filter((output) => output.id !== runId),
+              ...metadata.outputs.filter((o) => o.id !== runId),
               {
                 id: runId,
                 contents: [
@@ -214,6 +228,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
         }
       },
     },
+
     {
       icon: <UndoIcon size={18} />,
       description: "View Previous version",
@@ -221,13 +236,10 @@ export const codeArtifact = new Artifact<"code", Metadata>({
         handleVersionChange("prev");
       },
       isDisabled: ({ currentVersionIndex }) => {
-        if (currentVersionIndex === 0) {
-          return true;
-        }
-
-        return false;
+        return currentVersionIndex === 0;
       },
     },
+
     {
       icon: <RedoIcon size={18} />,
       description: "View Next version",
@@ -235,13 +247,10 @@ export const codeArtifact = new Artifact<"code", Metadata>({
         handleVersionChange("next");
       },
       isDisabled: ({ isCurrentVersion }) => {
-        if (isCurrentVersion) {
-          return true;
-        }
-
-        return false;
+        return isCurrentVersion;
       },
     },
+
     {
       icon: <CopyIcon size={18} />,
       description: "Copy code to clipboard",
@@ -251,6 +260,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
       },
     },
   ],
+
   toolbar: [
     {
       icon: <MessageIcon />,

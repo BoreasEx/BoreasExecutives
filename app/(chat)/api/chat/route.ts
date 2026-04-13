@@ -71,6 +71,377 @@ function extractTextFromParts(
     .trim();
 }
 
+type ScoreLevel = 0 | 1 | 2 | 3;
+type BuyerStyle = "disqualifying" | "analytical" | "strategic";
+type Step = 1 | 2 | 3 | 4 | 5;
+
+type EvaluationScores = {
+  offerStructure: ScoreLevel;
+  technicalDepth: ScoreLevel;
+  operationalCredibility: ScoreLevel;
+  buyerRiskReduction: ScoreLevel;
+};
+
+type TechnicalSignals = {
+  hasBrix: boolean;
+  hasDefects: boolean;
+  hasColor: boolean;
+  hasIQF: boolean;
+  hasForeignMaterial: boolean;
+};
+
+const toneTemplates: Record<BuyerStyle, Record<keyof EvaluationScores, string>> =
+  {
+    disqualifying: {
+      offerStructure: "Your offer is not structured enough to be reviewed.",
+      technicalDepth: "You are not giving usable technical specifications.",
+      operationalCredibility: "Operational control remains unclear.",
+      buyerRiskReduction: "Nothing here materially reduces buyer risk.",
+    },
+    analytical: {
+      offerStructure: "The offer is partially structured, but still incomplete.",
+      technicalDepth: "Technical data is present, but still not robust enough.",
+      operationalCredibility:
+        "Execution control is mentioned, but not convincingly demonstrated.",
+      buyerRiskReduction:
+        "The offer remains only partially reassuring from a buyer standpoint.",
+    },
+    strategic: {
+      offerStructure:
+        "The commercial basis is acceptable. The issue is now differentiation.",
+      technicalDepth: "Technical acceptability alone is not enough.",
+      operationalCredibility:
+        "Execution appears credible, but I still need stronger assurance.",
+      buyerRiskReduction:
+        "A credible file still needs a stronger buying rationale.",
+    },
+  };
+
+const stepQuestions: Record<Step, string> = {
+  1: "Present your offer clearly: product specs, crop, volume, price basis, and supply conditions.",
+  2: "Be specific on technical quality: variety, Brix range, sizing, defect limits, packing, and broken fruit tolerance.",
+  3: "What exactly do you guarantee on consistency from lot to lot?",
+  4: "Who is the producer, and how do you control traceability, quality, and pre-shipment conformity?",
+  5: "Explain in practical terms why this supply should be considered commercially and operationally credible.",
+};
+
+const egyptianVarietiesCommon = ["festival", "fortuna"];
+const egyptianVarietiesPlausible = [
+  "camarosa",
+  "sweet charlie",
+  "sweet sensation",
+  "radiance",
+];
+
+function clampScore(value: number): ScoreLevel {
+  if (value <= 0) return 0;
+  if (value === 1) return 1;
+  if (value === 2) return 2;
+  return 3;
+}
+
+function detectCurrentStep(uiMessages: ChatMessage[]): Step {
+  const userTurns = uiMessages.filter((m) => m.role === "user").length;
+  if (userTurns <= 1) return 1;
+  if (userTurns === 2) return 2;
+  if (userTurns === 3) return 3;
+  if (userTurns === 4) return 4;
+  return 5;
+}
+
+function getPriorityDimensions(step: Step): Array<keyof EvaluationScores> {
+  switch (step) {
+    case 1:
+      return ["offerStructure", "technicalDepth"];
+    case 2:
+      return ["technicalDepth", "offerStructure"];
+    case 3:
+      return ["technicalDepth", "operationalCredibility"];
+    case 4:
+      return ["operationalCredibility", "technicalDepth"];
+    case 5:
+      return ["buyerRiskReduction", "operationalCredibility"];
+  }
+}
+
+function extractTechnicalSignals(message: string): TechnicalSignals {
+  return {
+    hasBrix: /brix/i.test(message),
+    hasDefects: /defect|broken|damage|tolerance/i.test(message),
+    hasColor: /color|colour|red|dark red|bright red/i.test(message),
+    hasIQF: /iqf|separation|clump|clumping|free flowing|frozen/i.test(message),
+    hasForeignMaterial: /leaf|green|foreign|calyx|peduncle/i.test(message),
+  };
+}
+
+function scoreOfferStructure(message: string): ScoreLevel {
+  const hasVolume = /volume|tons|tonnes|mt\b|qty|quantity/i.test(message);
+  const hasPrice = /price|usd|eur|fob|cif|cnf/i.test(message);
+  const hasSpecs = /brix|size|variety|grade|packing|crop/i.test(message);
+  const hasSupply = /available|shipment|lead time|payment|terms/i.test(message);
+
+  const count =
+    Number(hasVolume) +
+    Number(hasPrice) +
+    Number(hasSpecs) +
+    Number(hasSupply);
+
+  return clampScore(count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : 3);
+}
+
+function scoreTechnicalDepth(message: string): ScoreLevel {
+  const signals = extractTechnicalSignals(message);
+
+  const count =
+    Number(signals.hasBrix) +
+    Number(signals.hasDefects) +
+    Number(signals.hasColor) +
+    Number(signals.hasIQF) +
+    Number(signals.hasForeignMaterial);
+
+  const hasVariety =
+    /festival|fortuna|camarosa|sweet charlie|sweet sensation|radiance/i.test(
+      message
+    );
+  const base = count + Number(hasVariety);
+
+  return clampScore(base === 0 ? 0 : base <= 2 ? 1 : base <= 4 ? 2 : 3);
+}
+
+function scoreOperationalCredibility(message: string): ScoreLevel {
+  const hasProducer =
+    /producer|factory|plant|processor|grower|trader|intermediary/i.test(
+      message
+    );
+  const hasTraceability = /traceability|traceable|batch|lot/i.test(message);
+  const hasQC = /quality control|inspection|lab|testing|qa|qc/i.test(message);
+  const hasShipment = /shipment|loading|pre-shipment|container/i.test(message);
+
+  const count =
+    Number(hasProducer) +
+    Number(hasTraceability) +
+    Number(hasQC) +
+    Number(hasShipment);
+
+  return clampScore(count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : 3);
+}
+
+function scoreBuyerRiskReduction(message: string): ScoreLevel {
+  const hasRisk = /risk|secure|reliable|consistency|guarantee|compliance/i.test(
+    message
+  );
+  const hasCommercial = /price|market|competitive|cost/i.test(message);
+  const hasExecution =
+    /traceability|shipment|quality control|producer|contract/i.test(message);
+  const hasBuyerView =
+    /industrial|buyer|approval|jam|processing|manufactur/i.test(message);
+
+  const count =
+    Number(hasRisk) +
+    Number(hasCommercial) +
+    Number(hasExecution) +
+    Number(hasBuyerView);
+
+  return clampScore(count === 0 ? 0 : count === 1 ? 1 : count <= 3 ? 2 : 3);
+}
+
+function scoreConversation(
+  uiMessages: ChatMessage[],
+  lastUserMessageText: string
+): EvaluationScores {
+  const combinedUserText = uiMessages
+    .filter((m) => m.role === "user")
+    .map((m) =>
+      extractTextFromParts(m.parts as Array<Record<string, unknown>> | undefined)
+    )
+    .join(" \n ");
+
+  const fullText = `${combinedUserText}\n${lastUserMessageText}`.trim();
+
+  return {
+    offerStructure: scoreOfferStructure(fullText),
+    technicalDepth: scoreTechnicalDepth(fullText),
+    operationalCredibility: scoreOperationalCredibility(fullText),
+    buyerRiskReduction: scoreBuyerRiskReduction(fullText),
+  };
+}
+
+function getTotalScore(scores: EvaluationScores): number {
+  return (
+    scores.offerStructure +
+    scores.technicalDepth +
+    scores.operationalCredibility +
+    scores.buyerRiskReduction
+  );
+}
+
+function getBuyerStyle(scores: EvaluationScores): BuyerStyle {
+  const total = getTotalScore(scores);
+  if (total <= 3) return "disqualifying";
+  if (total <= 7) return "analytical";
+  return "strategic";
+}
+
+function getRelevantWeakness(
+  scores: EvaluationScores,
+  step: Step
+): keyof EvaluationScores {
+  const priorities = getPriorityDimensions(step);
+  return priorities.sort((a, b) => scores[a] - scores[b])[0];
+}
+
+function detectVariety(message: string): string | null {
+  const lower = message.toLowerCase();
+
+  for (const variety of egyptianVarietiesCommon) {
+    if (lower.includes(variety)) return variety;
+  }
+
+  for (const variety of egyptianVarietiesPlausible) {
+    if (lower.includes(variety)) return variety;
+  }
+
+  const explicitVariety = lower.match(/variety[:\s]+([a-z\s-]+)/i);
+  return explicitVariety?.[1]?.trim() ?? null;
+}
+
+function classifyVariety(
+  variety: string | null
+): "common" | "plausible" | "unknown" | "none" {
+  if (!variety) return "none";
+  if (egyptianVarietiesCommon.includes(variety)) return "common";
+  if (egyptianVarietiesPlausible.includes(variety)) return "plausible";
+  return "unknown";
+}
+
+function getVarietyContext(message: string): string {
+  const variety = detectVariety(message);
+  const varietyClass = classifyVariety(variety);
+
+  if (varietyClass === "plausible") {
+    return `VARIETY CONTEXT:
+- The participant mentioned "${variety}", which is plausible in Egypt but less typical than Festival or Fortuna.
+Instruction:
+Do not reject it as false. Treat it as plausible but require clarification on why this variety is used and how it affects size, firmness, and consistency.`;
+  }
+
+  if (varietyClass === "unknown") {
+    return `VARIETY CONTEXT:
+- The participant mentioned "${variety}", which does not clearly align with standard Egyptian IQF strawberry supply.
+Instruction:
+Express doubt, ask for clarification, and test sourcing credibility. Do not state certainty unless documentation supports it.`;
+  }
+
+  return "";
+}
+
+function buildBoreasContext(
+  uiMessages: ChatMessage[],
+  lastUserMessageText: string
+): string {
+  const step = detectCurrentStep(uiMessages);
+  const scores = scoreConversation(uiMessages, lastUserMessageText);
+  const style = getBuyerStyle(scores);
+  const weakness = getRelevantWeakness(scores, step);
+  const toneLine = toneTemplates[style][weakness];
+  const questionLine = stepQuestions[step];
+  const varietyContext = getVarietyContext(lastUserMessageText);
+
+  return `BOREAS NEGOTIATION CONTEXT:
+- Current step: ${step}
+- Buyer style: ${style}
+- Priority weakness: ${weakness}
+- Invisible evaluation scores:
+  - offerStructure: ${scores.offerStructure}/3
+  - technicalDepth: ${scores.technicalDepth}/3
+  - operationalCredibility: ${scores.operationalCredibility}/3
+  - buyerRiskReduction: ${scores.buyerRiskReduction}/3
+
+Behavior instructions:
+- Stay strictly in buyer role
+- Keep responses short and impactful
+- Use this tone line as the behavioral direction: "${toneLine}"
+- Focus primarily on this question or objection: "${questionLine}"
+- Do not reveal scores, steps, or evaluation logic
+- Do not become helpful
+- If the answer is weak, remain on the same issue and press harder
+- If the answer is structured, become more analytical and selective
+- The supplier may be either the producer or a trader/intermediary
+- The origin must remain Egypt
+
+${varietyContext}`.trim();
+}
+type CertificationStatus = "fail" | "borderline" | "pass" | "strong_pass";
+
+function getCertificationStatus(
+  scores: EvaluationScores
+): CertificationStatus {
+  const total =
+    scores.offerStructure +
+    scores.technicalDepth +
+    scores.operationalCredibility +
+    scores.buyerRiskReduction;
+
+  const criticalZeros = [
+    scores.technicalDepth,
+    scores.operationalCredibility,
+    scores.buyerRiskReduction,
+  ].filter((v) => v === 0).length;
+
+  if (total <= 4 || criticalZeros >= 2) return "fail";
+  if (total <= 7 || criticalZeros === 1) return "borderline";
+  if (total <= 10) return "pass";
+  return "strong_pass";
+}
+
+function getCertificationVerdict(
+  status: CertificationStatus
+): string {
+  switch (status) {
+    case "fail":
+      return "The offer does not meet basic industrial buyer requirements.";
+    case "borderline":
+      return "The offer contains usable elements but remains too fragile for approval.";
+    case "pass":
+      return "The offer reaches a minimum credible level for industrial buyer review.";
+    case "strong_pass":
+      return "The offer is structured, credible, and defensible under buyer scrutiny.";
+  }
+}
+
+function getKeyWeaknesses(scores: EvaluationScores): string[] {
+  const weaknesses: string[] = [];
+
+  if (scores.offerStructure <= 1) {
+    weaknesses.push("Lack of structured commercial offer");
+  }
+
+  if (scores.technicalDepth <= 1) {
+    weaknesses.push("Insufficient technical specifications");
+  }
+
+  if (scores.operationalCredibility <= 1) {
+    weaknesses.push("Limited control over producer and execution");
+  }
+
+  if (scores.buyerRiskReduction <= 1) {
+    weaknesses.push("Insufficient buyer risk mitigation");
+  }
+
+  return weaknesses.slice(0, 3);
+}
+
+function buildCertificationResult(scores: EvaluationScores) {
+  const status = getCertificationStatus(scores);
+
+  return {
+    status,
+    scores,
+    verdict: getCertificationVerdict(status),
+    weaknesses: getKeyWeaknesses(scores),
+  };
+}
+
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
@@ -201,7 +572,6 @@ export async function POST(request: Request) {
 
     const modelMessages = await convertToModelMessages(uiMessages);
 
-    // --- AJOUT : extraction du dernier message utilisateur ---
     const lastUserMessageText =
       message?.role === "user"
         ? extractTextFromParts(
@@ -241,6 +611,11 @@ Express serious doubt, suspend validation, and require documented justification 
       }
     }
 
+    const boreasContext = buildBoreasContext(uiMessages, lastUserMessageText);
+const currentStep = detectCurrentStep(uiMessages);
+const boreasScores = scoreConversation(uiMessages, lastUserMessageText);
+const certificationResult = buildCertificationResult(boreasScores);
+
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
@@ -248,7 +623,9 @@ Express serious doubt, suspend validation, and require documented justification 
           model: getLanguageModel(chatModel),
           system: `${systemPrompt({ requestHints, supportsTools })}
 
-${supplierContext}`,
+${boreasContext}
+
+${supplierContext}`.trim(),
           messages: modelMessages,
           stopWhen: stepCountIs(5),
           experimental_activeTools:
@@ -290,6 +667,37 @@ ${supplierContext}`,
         dataStream.merge(
           result.toUIMessageStream({ sendReasoning: isReasoningModel })
         );
+if (currentStep >= 5) {
+  dataStream.write({
+    type: "data-clear",
+    data: null,
+  } as any);
+
+  dataStream.write({
+    type: "data-id",
+    data: "certification-result",
+  } as any);
+
+  dataStream.write({
+    type: "data-kind",
+    data: "certification",
+  } as any);
+
+  dataStream.write({
+    type: "data-title",
+    data: "Certification Result",
+  } as any);
+
+  dataStream.write({
+    type: "data-certification",
+    data: certificationResult,
+  } as any);
+
+  dataStream.write({
+    type: "data-finish",
+    data: null,
+  } as any);
+}
 
         if (titlePromise) {
           const title = await titlePromise;

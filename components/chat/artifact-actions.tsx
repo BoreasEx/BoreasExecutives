@@ -26,6 +26,11 @@ function PureArtifactActions({
 }: ArtifactActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
 
+  // 🔒 IMPORTANT : on exclut certification
+  if (artifact.kind === "certification") {
+    return null;
+  }
+
   const artifactDefinition = artifactDefinitions.find(
     (definition) => definition.kind === artifact.kind
   );
@@ -35,7 +40,7 @@ function PureArtifactActions({
   }
 
   const actionContext: ArtifactActionContext = {
-    content: artifact.content,
+    content: artifact.content, // ✅ maintenant garanti string
     handleVersionChange,
     currentVersionIndex,
     isCurrentVersion,

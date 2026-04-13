@@ -4,7 +4,11 @@ import { useEffect } from "react";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
-import { artifactDefinitions } from "./artifact";
+import {
+  artifactDefinitions,
+  type CertificationArtifact,
+  type UIArtifact,
+} from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
 
@@ -27,6 +31,7 @@ export function DataStreamHandler() {
         mutate(unstable_serialize(getChatHistoryPaginationKey));
         continue;
       }
+
       const artifactDefinition = artifactDefinitions.find(
         (currentArtifactDefinition) =>
           currentArtifactDefinition.kind === artifact.kind
@@ -40,7 +45,7 @@ export function DataStreamHandler() {
         });
       }
 
-      setArtifact((draftArtifact) => {
+      setArtifact((draftArtifact): UIArtifact => {
         if (!draftArtifact) {
           return { ...initialArtifactData, status: "streaming" };
         }
@@ -61,17 +66,59 @@ export function DataStreamHandler() {
             };
 
           case "data-kind":
+            if (delta.data === "certification") {
+              const nextArtifact: CertificationArtifact = {
+                title: draftArtifact.title,
+                documentId: draftArtifact.documentId,
+                kind: "certification",
+                content:
+                  draftArtifact.kind === "certification"
+                    ? draftArtifact.content
+                    : {
+                        status: "borderline",
+                        scores: {
+                          offerStructure: 0,
+                          technicalDepth: 0,
+                          operationalCredibility: 0,
+                          buyerRiskReduction: 0,
+                        },
+                        verdict: "",
+                        weaknesses: [],
+                      },
+                isVisible: draftArtifact.isVisible,
+                status: "streaming",
+                boundingBox: draftArtifact.boundingBox,
+              };
+
+              return nextArtifact;
+            }
+
             return {
-              ...draftArtifact,
+              title: draftArtifact.title,
+              documentId: draftArtifact.documentId,
               kind: delta.data,
+              content:
+                draftArtifact.kind === "certification"
+                  ? ""
+                  : draftArtifact.content,
+              isVisible: draftArtifact.isVisible,
               status: "streaming",
+              boundingBox: draftArtifact.boundingBox,
             };
 
           case "data-clear":
+            if (draftArtifact.kind === "certification") {
+              return draftArtifact;
+            }
+
             return {
-              ...draftArtifact,
+              title: draftArtifact.title,
+              documentId: draftArtifact.documentId,
+              kind: draftArtifact.kind,
               content: "",
+              isVisible: draftArtifact.isVisible,
               status: "streaming",
+              boundingBox: draftArtifact.boundingBox,
             };
 
           case "data-finish":
@@ -79,6 +126,20 @@ export function DataStreamHandler() {
               ...draftArtifact,
               status: "idle",
             };
+
+          case "data-certification": {
+            const certificationArtifact: CertificationArtifact = {
+              title: draftArtifact.title,
+              documentId: draftArtifact.documentId,
+              kind: "certification",
+              status: "idle",
+              content: delta.data,
+              isVisible: true,
+              boundingBox: draftArtifact.boundingBox,
+            };
+
+            return certificationArtifact;
+          }
 
           default:
             return draftArtifact;

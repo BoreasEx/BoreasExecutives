@@ -330,6 +330,10 @@ export async function saveDocument({
   userId: string;
 }) {
   try {
+    if (kind === "certification") {
+      return null;
+    }
+
     return await db
       .insert(document)
       .values({

@@ -39,16 +39,30 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
 
     if (streamPart.type === "data-textDelta") {
       setArtifact((draftArtifact) => {
+        if (draftArtifact.kind === "certification") {
+          return draftArtifact;
+        }
+
+        const currentContent =
+          typeof draftArtifact.content === "string"
+            ? draftArtifact.content
+            : "";
+
+        const newContent = currentContent + streamPart.data;
+
         return {
-          ...draftArtifact,
-          content: draftArtifact.content + streamPart.data,
+          title: draftArtifact.title,
+          documentId: draftArtifact.documentId,
+          kind: "text",
+          content: newContent,
           isVisible:
             draftArtifact.status === "streaming" &&
-            draftArtifact.content.length > 400 &&
-            draftArtifact.content.length < 450
+            currentContent.length > 400 &&
+            currentContent.length < 450
               ? true
               : draftArtifact.isVisible,
           status: "streaming",
+          boundingBox: draftArtifact.boundingBox,
         };
       });
     }

@@ -8,12 +8,21 @@ export const imageArtifact = new Artifact({
   description: "Useful for image generation",
   onStreamPart: ({ streamPart, setArtifact }) => {
     if (streamPart.type === "data-imageDelta") {
-      setArtifact((draftArtifact) => ({
-        ...draftArtifact,
-        content: streamPart.data,
-        isVisible: true,
-        status: "streaming",
-      }));
+      setArtifact((draftArtifact) => {
+        if (draftArtifact.kind === "certification") {
+          return draftArtifact;
+        }
+
+        return {
+          title: draftArtifact.title,
+          documentId: draftArtifact.documentId,
+          kind: "image",
+          content: streamPart.data,
+          isVisible: true,
+          status: "streaming",
+          boundingBox: draftArtifact.boundingBox,
+        };
+      });
     }
   },
   content: ImageEditor,

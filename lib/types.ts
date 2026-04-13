@@ -40,6 +40,17 @@ export type CustomUIDataTypes = {
   clear: null;
   finish: null;
   "chat-title": string;
+  certification: {
+    status: "fail" | "borderline" | "pass" | "strong_pass";
+    scores: {
+      offerStructure: number;
+      technicalDepth: number;
+      operationalCredibility: number;
+      buyerRiskReduction: number;
+    };
+    verdict: string;
+    weaknesses: string[];
+  };
 };
 
 export type ChatMessage = UIMessage<
