@@ -12,7 +12,4 @@ export const guestRegex = /^guest-\d+$/;
 
 export const DUMMY_PASSWORD = generateDummyPassword();
 
-export const suggestions = [
-  "Describe your traceability and compliance process.",
-  "Defend your production consistency and supply reliability.",
-];
+export const suggestions: string[] = [];
