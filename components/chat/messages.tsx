@@ -61,38 +61,46 @@ function PureMessages({
 
   return (
     <div className="relative flex-1 bg-background">
-   {messages.length === 0 && !isLoading && (
-  <div className="absolute inset-0 z-10 flex items-center justify-center px-4 sm:px-6">
-    <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-6 sm:p-8 md:p-10 shadow-[var(--shadow-float)] backdrop-blur">
-      <div className="flex flex-col items-center text-center">
-        <img
-          src="/boreas-executives-logo.png"
-          alt="Boreas Executives"
-          className="mb-5 h-16 w-auto max-w-[180px] object-contain md:h-20 md:max-w-[220px]"
-        />
+      {messages.length === 0 && !isLoading && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center px-4 sm:px-6">
+          <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-6 sm:p-8 md:p-10 shadow-[var(--shadow-float)] backdrop-blur">
+            <div className="flex flex-col items-center text-center">
+              <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-center md:gap-5">
+                <img
+                  src="/boreas-executives-logo.png"
+                  alt="Boreas Executives"
+                  className="h-14 w-auto max-w-[150px] object-contain md:h-16 md:max-w-[170px] shrink-0"
+                />
 
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          Boreas Executives
-        </h1>
+                <div className="text-center md:text-left">
+                  <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                    Boreas Executives
+                  </h1>
 
-        <p className="mt-3 text-sm leading-6 text-muted-foreground md:text-base">
-          AI-powered IQF fruit negotiation simulator
-        </p>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground md:text-base">
+                    AI-powered IQF fruit negotiation simulator
+                  </p>
+                </div>
+              </div>
 
-        <div className="mt-8 max-w-2xl rounded-2xl border border-white/10 bg-white/5 px-5 py-6">
-         <p className="text-lg leading-8 text-foreground sm:text-xl">
-  <span className="font-semibold">Scenario:</span>{" "}
-  You are an Egyptian IQF strawberry supplier negotiating with a European jam manufacturer.
-</p>
+              <div className="mt-8 max-w-2xl rounded-2xl border border-white/10 bg-white/5 px-5 py-6">
+                <p className="text-lg leading-8 text-foreground sm:text-xl">
+                  <span className="font-semibold">Scenario:</span>{" "}
+                  You are an Egyptian IQF strawberry supplier negotiating with a
+                  European jam manufacturer.
+                </p>
 
-          <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
-            Start with your offer. Expect pressure on consistency, traceability, and risk.
-          </p>
+                <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
+                  Start with your offer. Expect pressure on consistency,
+                  traceability, and risk.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-)}      <div
+      )}
+
+      <div
         className={cn(
           "absolute inset-0 touch-pan-y overflow-y-auto",
           messages.length > 0 ? "bg-background" : "bg-transparent"
