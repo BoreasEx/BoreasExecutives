@@ -65,7 +65,7 @@ function PureMessages({
         <div className="absolute inset-0 z-10 flex items-start justify-center pt-6 px-4 sm:px-6">
           <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-4 sm:p-6 md:p-10 shadow-[var(--shadow-float)] backdrop-blur">
             <div className="flex flex-col items-center text-center">
-              <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-center md:gap-5">
+              <div className="flex flex-col items-center gap-2 sm:gap-3 md:flex-row md:items-center md:justify-center md:gap-5">
                 <img
                   src="/boreas-executives-logo.png"
                   alt="Boreas Executives"
