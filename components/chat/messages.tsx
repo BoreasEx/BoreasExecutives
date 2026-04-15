@@ -80,13 +80,10 @@ function PureMessages({
         </p>
 
         <div className="mt-8 max-w-2xl rounded-2xl border border-white/10 bg-white/5 px-5 py-6">
-          <p className="text-sm font-medium uppercase tracking-[0.12em] text-foreground/70">
-            Scenario:
-          </p>
-
-          <p className="mt-4 text-lg leading-8 text-foreground sm:text-xl">
-            You are an Egyptian IQF strawberry supplier negotiating with a European jam manufacturer.
-          </p>
+         <p className="text-lg leading-8 text-foreground sm:text-xl">
+  <span className="font-semibold">Scenario:</span>{" "}
+  You are an Egyptian IQF strawberry supplier negotiating with a European jam manufacturer.
+</p>
 
           <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
             Start with your offer. Expect pressure on consistency, traceability, and risk.
