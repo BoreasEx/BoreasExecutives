@@ -73,7 +73,7 @@ function PureMessages({
                 />
 
                 <div className="text-center md:text-left">
-                  <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl md:text-4xl">
+                  <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl md:text-4xl">
                     Boreas Executives
                   </h1>
 
@@ -90,10 +90,9 @@ function PureMessages({
                   European jam manufacturer.
                 </p>
 
-                <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
-                  Start with your offer. Expect pressure on consistency,
-                  traceability, and risk.
-                </p>
+                <p className="hidden sm:block mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
+ 		 Start with your offer. Expect pressure on consistency, traceability, and risk.
+		</p>
               </div>
             </div>
           </div>
