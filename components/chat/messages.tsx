@@ -83,7 +83,7 @@ function PureMessages({
                 </div>
               </div>
 
-              <div className="mt-5 sm:mt-6 md:mt-8 max-w-2xl rounded-2xl border border-white/10 bg-white/5 px-4 py-4 sm:px-5 sm:py-6">
+              <div className="mt-3 sm:mt-6 md:mt-8 max-w-2xl rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:px-5 sm:py-6">
                 <p className="text-base leading-7 text-foreground sm:text-lg">
                   <span className="font-semibold">Scenario:</span>{" "}
                   You are an Egyptian IQF strawberry supplier negotiating with a
