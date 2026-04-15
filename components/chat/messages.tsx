@@ -61,49 +61,37 @@ function PureMessages({
 
   return (
     <div className="relative flex-1 bg-background">
-    {messages.length === 0 && !isLoading && (
+   {messages.length === 0 && !isLoading && (
   <div className="absolute inset-0 z-10 flex items-center justify-center px-4 sm:px-6">
-    <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-4 sm:p-6 md:p-10 shadow-[var(--shadow-float)] backdrop-blur">
-      <div className="mb-4 flex flex-col items-center text-center md:mb-7 md:flex-row md:items-center md:gap-5 md:text-left">
+    <div className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card/70 p-6 sm:p-8 md:p-10 shadow-[var(--shadow-float)] backdrop-blur">
+      <div className="flex flex-col items-center text-center">
         <img
           src="/boreas-executives-logo.png"
           alt="Boreas Executives"
-          className="mb-3 h-14 w-auto max-w-[160px] shrink-0 object-contain md:mb-0 md:h-24 md:max-w-[220px]"
+          className="mb-5 h-16 w-auto max-w-[180px] object-contain md:h-20 md:max-w-[220px]"
         />
-        <div className="min-w-0">
-          <h1 className="text-[2rem] leading-tight font-semibold tracking-tight text-foreground sm:text-4xl md:text-2xl">
-            Boreas Executives
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground md:text-base">
-            AI-powered IQF fruits negotiation simulator
+
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          Boreas Executives
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-muted-foreground md:text-base">
+          AI-powered IQF fruit negotiation simulator
+        </p>
+
+        <div className="mt-8 max-w-2xl rounded-2xl border border-white/10 bg-white/5 px-5 py-6">
+          <p className="text-sm font-medium uppercase tracking-[0.12em] text-foreground/70">
+            Scenario:
+          </p>
+
+          <p className="mt-4 text-lg leading-8 text-foreground sm:text-xl">
+            You are an Egyptian IQF strawberry supplier negotiating with a European jam manufacturer.
+          </p>
+
+          <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
+            Start with your offer. Expect pressure on consistency, traceability, and risk.
           </p>
         </div>
-      </div>
-
-
-
-      <div className="hidden md:block">
-        <p className="mx-auto max-w-3xl text-center text-sm leading-6 uppercase tracking-[0.08em] text-foreground/80 md:text-[15px]">
-          <span className="font-semibold text-foreground">Product:</span>
-          <span className="ml-1 text-foreground/75">IQF STRAWBERRIES</span>
-
-          <span className="mx-4 text-foreground/30">|</span>
-
-          <span className="font-semibold text-foreground">Origin:</span>
-          <span className="ml-1 text-foreground/75">EGYPT</span>
-
-          <span className="mx-4 text-foreground/30">|</span>
-
-          <span className="font-semibold text-foreground">Buyer:</span>
-          <span className="ml-1 text-foreground/75">FRENCH JAM MANUFACTURER</span>
-
-          <span className="mx-4 text-foreground/30">|</span>
-
-          <span className="font-semibold text-foreground">Style:</span>
-          <span className="ml-1 text-foreground/75">
-            DEMANDING, CONCISE, RISK-FOCUSED
-          </span>
-        </p>
       </div>
     </div>
   </div>

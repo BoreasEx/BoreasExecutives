@@ -152,8 +152,8 @@ function PureMultimodalInput({
   const composerPlaceholder = editingMessage
     ? "Revise your negotiation message..."
     : isMobileComposer
-      ? "Hello, I am a jam processor sourcing large volumes of Egyptian IQF strawberries. Please present your offer."
-      : "Hello, I am a jam processor sourcing large volumes of Egyptian IQF strawberries. Please present your offer.";
+      ? "Start the negotiation…"
+      : "Start the negotiation…";
 
   useEffect(() => {
     if (hasRestoredDraft.current) return;
