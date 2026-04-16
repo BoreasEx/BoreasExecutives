@@ -88,6 +88,57 @@ type TechnicalSignals = {
   hasIQF: boolean;
   hasForeignMaterial: boolean;
 };
+type NegotiationMemory = {
+  producerName?: string;
+  incoterm?: string;
+  jurisdiction?: string;
+};
+
+function extractNegotiationMemory(
+  uiMessages: ChatMessage[],
+  lastUserMessageText: string
+): NegotiationMemory {
+  const combinedUserText = uiMessages
+    .filter((m) => m.role === "user")
+    .map((m) =>
+      extractTextFromParts(m.parts as Array<Record<string, unknown>> | undefined)
+    )
+    .join(" \n ");
+
+  const fullText = `${combinedUserText}\n${lastUserMessageText}`.toLowerCase();
+
+  let producerName: string | undefined;
+  let incoterm: string | undefined;
+  let jurisdiction: string | undefined;
+
+  const producerMatch =
+    fullText.match(/producer called\s+([a-z0-9&.\- ]{2,60})/i) ||
+    fullText.match(/processor called\s+([a-z0-9&.\- ]{2,60})/i) ||
+    fullText.match(/producer is\s+([a-z0-9&.\- ]{2,60})/i) ||
+    fullText.match(/processor is\s+([a-z0-9&.\- ]{2,60})/i);
+
+  if (producerMatch?.[1]) {
+    producerName = producerMatch[1].trim();
+  }
+
+  if (/\bex works\b|\bexw\b/i.test(fullText)) {
+    incoterm = "EXW";
+  } else if (/\bfob\b/i.test(fullText)) {
+    incoterm = "FOB";
+  } else if (/\bcif\b/i.test(fullText)) {
+    incoterm = "CIF";
+  }
+
+  if (/egyptian jurisdiction|jurisdiction is egyptian|governed by egyptian law/i.test(fullText)) {
+    jurisdiction = "Egyptian";
+  }
+
+  return {
+    producerName,
+    incoterm,
+    jurisdiction,
+  };
+}
 
 const toneTemplates: Record<BuyerStyle, Record<keyof EvaluationScores, string>> =
   {
@@ -120,7 +171,7 @@ const stepQuestions: Record<Step, string> = {
   1: "Present your offer clearly: product specs, crop, volume, price basis, and supply conditions.",
   2: "Be specific on technical quality: variety, Brix range, sizing, defect limits, packing, and broken fruit tolerance.",
   3: "What exactly do you guarantee on consistency from lot to lot?",
-  4: "Who is the producer, and how do you control traceability, quality, and pre-shipment conformity?",
+  4: "Clarify the producer setup and explain how you control traceability, quality, and pre-shipment conformity.",
   5: "Explain in practical terms why this supply should be considered commercially and operationally credible.",
 };
 
@@ -174,7 +225,13 @@ function isConversationEnded(message: string): boolean {
 
   return (
     text.includes("we will not proceed") ||
+    text.includes("we cannot proceed") ||
+    text.includes("we cannot move forward") ||
+    text.includes("we will not move forward") ||
     text.includes("i refuse") ||
+    text.includes("not acceptable for us") ||
+    text.includes("under these conditions, we cannot move forward") ||
+    text.includes("under these conditions, we will not proceed") ||
     text.includes("we can move forward under conditions") ||
     text.includes("we can move forward subject to validation") ||
     text.includes("send your final offer") ||
@@ -378,13 +435,26 @@ function buildBoreasContext(
   const style = getBuyerStyle(scores);
   const weakness = getRelevantWeakness(scores, step);
   const toneLine = toneTemplates[style][weakness];
-  const questionLine = stepQuestions[step];
+  const memory = extractNegotiationMemory(uiMessages, lastUserMessageText);
   const varietyContext = getVarietyContext(lastUserMessageText);
 
+  let questionLine = stepQuestions[step];
+
+  if (step === 4 && memory.producerName) {
+    questionLine = `The producer ${memory.producerName} is noted. Describe in concrete terms how traceability, quality control, and pre-shipment conformity are managed.`;
+  }
+
+  if (step === 5 && memory.incoterm === "EXW") {
+    questionLine =
+      "Your Ex Works position is understood. Explain what concrete protections, compensation terms, and risk-mitigation mechanisms you offer despite that structure.";
+  }
   return `BOREAS NEGOTIATION CONTEXT:
 - Current step: ${step}
 - Buyer style: ${style}
 - Priority weakness: ${weakness}
+- Producer already mentioned: ${memory.producerName ?? "no"}
+- Incoterm already mentioned: ${memory.incoterm ?? "no"}
+- Jurisdiction already mentioned: ${memory.jurisdiction ?? "no"}
 - Invisible evaluation scores:
   - offerStructure: ${scores.offerStructure}/3
   - technicalDepth: ${scores.technicalDepth}/3
@@ -699,10 +769,8 @@ ${supplierContext}`.trim(),
     onFinish: async ({ text }) => {
       const assistantResponseText = text ?? "";
 
-      const shouldTriggerEvaluation =
-        currentStep >= 5 &&
-        didPassStep(boreasScores, 5) &&
-        isConversationEnded(assistantResponseText);
+  const shouldTriggerEvaluation =
+  currentStep >= 5 && isConversationEnded(assistantResponseText);
 
       if (shouldTriggerEvaluation) {
         dataStream.write({
