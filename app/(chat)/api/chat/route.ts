@@ -55,7 +55,6 @@ function getStreamContext() {
   }
 }
 
-export { getStreamContext };
 
 function extractTextFromParts(
   parts: Array<Record<string, unknown>> | undefined
@@ -140,13 +139,47 @@ function clampScore(value: number): ScoreLevel {
   return 3;
 }
 
-function detectCurrentStep(uiMessages: ChatMessage[]): Step {
-  const userTurns = uiMessages.filter((m) => m.role === "user").length;
-  if (userTurns <= 1) return 1;
-  if (userTurns === 2) return 2;
-  if (userTurns === 3) return 3;
-  if (userTurns === 4) return 4;
+function getStepThreshold(step: Step): ScoreLevel {
+  switch (step) {
+    case 1:
+      return 1;
+    case 2:
+      return 2;
+    case 3:
+      return 2;
+    case 4:
+      return 2;
+    case 5:
+      return 2;
+  }
+}
+
+function didPassStep(scores: EvaluationScores, step: Step): boolean {
+  const priorities = getPriorityDimensions(step);
+  const threshold = getStepThreshold(step);
+
+  return priorities.some((dimension) => scores[dimension] >= threshold);
+}
+
+function getCurrentStep(scores: EvaluationScores): Step {
+  if (!didPassStep(scores, 1)) return 1;
+  if (!didPassStep(scores, 2)) return 2;
+  if (!didPassStep(scores, 3)) return 3;
+  if (!didPassStep(scores, 4)) return 4;
   return 5;
+}
+
+function isConversationEnded(message: string): boolean {
+  const text = message.toLowerCase();
+
+  return (
+    text.includes("we will not proceed") ||
+    text.includes("i refuse") ||
+    text.includes("we can move forward under conditions") ||
+    text.includes("we can move forward subject to validation") ||
+    text.includes("send your final offer") ||
+    text.includes("submit the full file for review")
+  );
 }
 
 function getPriorityDimensions(step: Step): Array<keyof EvaluationScores> {
@@ -163,6 +196,7 @@ function getPriorityDimensions(step: Step): Array<keyof EvaluationScores> {
       return ["buyerRiskReduction", "operationalCredibility"];
   }
 }
+
 
 function extractTechnicalSignals(message: string): TechnicalSignals {
   return {
@@ -339,8 +373,8 @@ function buildBoreasContext(
   uiMessages: ChatMessage[],
   lastUserMessageText: string
 ): string {
-  const step = detectCurrentStep(uiMessages);
   const scores = scoreConversation(uiMessages, lastUserMessageText);
+  const step = getCurrentStep(scores);
   const style = getBuyerStyle(scores);
   const weakness = getRelevantWeakness(scores, step);
   const toneLine = toneTemplates[style][weakness];
@@ -611,100 +645,109 @@ Express serious doubt, suspend validation, and require documented justification 
       }
     }
 
-    const boreasContext = buildBoreasContext(uiMessages, lastUserMessageText);
-const currentStep = detectCurrentStep(uiMessages);
 const boreasScores = scoreConversation(uiMessages, lastUserMessageText);
+const currentStep = getCurrentStep(boreasScores);
 const certificationResult = buildCertificationResult(boreasScores);
+const boreasContext = buildBoreasContext(uiMessages, lastUserMessageText);
 
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
-      execute: async ({ writer: dataStream }) => {
-        const result = streamText({
-          model: getLanguageModel(chatModel),
-          system: `${systemPrompt({ requestHints, supportsTools })}
+execute: async ({ writer: dataStream }) => {
+  const result = streamText({
+    model: getLanguageModel(chatModel),
+    system: `${systemPrompt({ requestHints, supportsTools })}
 
 ${boreasContext}
 
 ${supplierContext}`.trim(),
-          messages: modelMessages,
-          stopWhen: stepCountIs(5),
-          experimental_activeTools:
-            isReasoningModel && !supportsTools
-              ? []
-              : [
-                  "getWeather",
-                  "createDocument",
-                  "editDocument",
-                  "updateDocument",
-                  "requestSuggestions",
-                ],
-          providerOptions: {},
-          tools: {
-            getWeather,
-            createDocument: createDocument({
-              session,
-              dataStream,
-              modelId: chatModel,
-            }),
-            editDocument: editDocument({ dataStream, session }),
-            updateDocument: updateDocument({
-              session,
-              dataStream,
-              modelId: chatModel,
-            }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-              modelId: chatModel,
-            }),
-          },
-          experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
-            functionId: "stream-text",
-          },
-        });
+    messages: modelMessages,
+    stopWhen: stepCountIs(5),
+    experimental_activeTools:
+      isReasoningModel && !supportsTools
+        ? []
+        : [
+            "getWeather",
+            "createDocument",
+            "editDocument",
+            "updateDocument",
+            "requestSuggestions",
+          ],
+    providerOptions: {},
+    tools: {
+      getWeather,
+      createDocument: createDocument({
+        session,
+        dataStream,
+        modelId: chatModel,
+      }),
+      editDocument: editDocument({ dataStream, session }),
+      updateDocument: updateDocument({
+        session,
+        dataStream,
+        modelId: chatModel,
+      }),
+      requestSuggestions: requestSuggestions({
+        session,
+        dataStream,
+        modelId: chatModel,
+      }),
+    },
+    experimental_telemetry: {
+      isEnabled: isProductionEnvironment,
+      functionId: "stream-text",
+    },
+    onFinish: async ({ text }) => {
+      const assistantResponseText = text ?? "";
 
-        dataStream.merge(
-          result.toUIMessageStream({ sendReasoning: isReasoningModel })
-        );
-if (currentStep >= 5) {
-  dataStream.write({
-    type: "data-clear",
-    data: null,
-  } as any);
+      const shouldTriggerEvaluation =
+        currentStep >= 5 &&
+        didPassStep(boreasScores, 5) &&
+        isConversationEnded(assistantResponseText);
 
-  dataStream.write({
-    type: "data-id",
-    data: "certification-result",
-  } as any);
+      if (shouldTriggerEvaluation) {
+        dataStream.write({
+          type: "data-clear",
+          data: null,
+        } as any);
 
-  dataStream.write({
-    type: "data-kind",
-    data: "certification",
-  } as any);
+        dataStream.write({
+          type: "data-id",
+          data: "certification-result",
+        } as any);
 
-  dataStream.write({
-    type: "data-title",
-    data: "Certification Result",
-  } as any);
+        dataStream.write({
+          type: "data-kind",
+          data: "certification",
+        } as any);
 
-  dataStream.write({
-    type: "data-certification",
-    data: certificationResult,
-  } as any);
+        dataStream.write({
+          type: "data-title",
+          data: "Certification Result",
+        } as any);
 
-  dataStream.write({
-    type: "data-finish",
-    data: null,
-  } as any);
-}
+        dataStream.write({
+          type: "data-certification",
+          data: certificationResult,
+        } as any);
 
-        if (titlePromise) {
-          const title = await titlePromise;
-          dataStream.write({ type: "data-chat-title", data: title });
-          updateChatTitleById({ chatId: id, title });
-        }
-      },
+        dataStream.write({
+          type: "data-finish",
+          data: null,
+        } as any);
+      }
+    },
+  });
+
+  dataStream.merge(
+    result.toUIMessageStream({ sendReasoning: isReasoningModel })
+  );
+
+  if (titlePromise) {
+    const title = await titlePromise;
+    dataStream.write({ type: "data-chat-title", data: title });
+    updateChatTitleById({ chatId: id, title });
+  }
+},
       generateId: generateUUID,
       onFinish: async ({ messages: finishedMessages }) => {
         if (isToolApprovalFlow) {
