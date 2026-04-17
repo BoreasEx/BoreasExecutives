@@ -1,9 +1,6 @@
 import { evaluateResponse } from "@/lib/boreas/evaluator";
 import { evaluatorTestCases } from "@/lib/boreas/evaluator.test-cases";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
 type EvaluatorTestCase = {
   name: string;
   input: {
@@ -14,7 +11,7 @@ type EvaluatorTestCase = {
 };
 
 function runEvaluatorTests() {
-  return evaluatorTestCases.map((testCase: EvaluatorTestCase) => {
+  return (evaluatorTestCases as EvaluatorTestCase[]).map((testCase) => {
     const output = evaluateResponse(testCase.input);
 
     return {
@@ -31,6 +28,8 @@ export async function GET() {
   return Response.json(results, {
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      Pragma: "no-cache",
+      Expires: "0",
     },
   });
 }
@@ -41,6 +40,8 @@ export async function POST() {
   return Response.json(results, {
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      Pragma: "no-cache",
+      Expires: "0",
     },
   });
 }
