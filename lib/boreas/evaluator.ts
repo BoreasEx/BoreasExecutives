@@ -1,559 +1,627 @@
-// =====================
-// TYPES
-// =====================
+export type BuyerStyle = "disqualifying" | "analytical" | "strategic";
 
-export type Step = 1 | 2 | 3 | 4 | 5;
-
-export type ScoreDimension =
+export type ScoreKey =
   | "offerStructure"
   | "technicalDepth"
   | "operationalCredibility"
   | "buyerRiskReduction";
 
-export type BuyerStyle = "disqualifying" | "analytical" | "strategic";
-
-export type BoreasScores = {
+export type Scores = {
   offerStructure: number;
   technicalDepth: number;
   operationalCredibility: number;
   buyerRiskReduction: number;
 };
 
-export type ConversationMemory = {
+export type ExpectedBuyerReaction = {
+  toneLine: string;
+  questionLine: string;
+};
+
+export type ExtractedMemory = {
+  incoterm?: "EXW" | "FOB" | "CIF" | "CFR";
   producerName?: string;
-  incoterm?: string;
-  jurisdiction?: string;
 };
 
-export type EvaluatorInput = {
-  userAnswer: string;
-  currentStep: Step;
-  previousScores?: BoreasScores;
-  conversationMemory?: ConversationMemory;
+export type EvaluationSignals = {
+  keywordStuffingDetected: boolean;
 };
 
-export type EvaluatorOutput = {
-  scores: BoreasScores;
+export type EvaluatorDebug = {
+  thresholdForStep: number;
+  currentStepScore: number;
+  reasons: string[];
+};
+
+export type EvaluatorResult = {
+  scores: Scores;
   didPassStep: boolean;
-  nextStep: Step;
-  dominantWeakness: ScoreDimension;
-  priorityDimensions: ScoreDimension[];
+  nextStep: number;
+  dominantWeakness: ScoreKey;
+  priorityDimensions: ScoreKey[];
   buyerStyle: BuyerStyle;
-  expectedBuyerReaction: {
-    toneLine: string;
-    questionLine: string;
-    objectionLine?: string;
-  };
-  extractedMemory: ConversationMemory;
-  debug: {
-    thresholdForStep: number;
-    currentStepScore: number;
-    reasons: string[];
-  };
+  expectedBuyerReaction: ExpectedBuyerReaction;
+  extractedMemory: ExtractedMemory;
+  evaluationSignals: EvaluationSignals;
+  debug: EvaluatorDebug;
 };
 
-// =====================
-// CONSTANTS
-// =====================
-
-const STEP_THRESHOLDS: Record<Step, number> = {
-  1: 2,
-  2: 2,
-  3: 2,
-  4: 2,
-  5: 2,
+export type EvaluateInput = {
+  text: string;
+  currentStep: 1 | 2 | 3 | 4 | 5;
 };
 
-const STEP_PRIORITY: Record<Step, ScoreDimension[]> = {
-  1: ["offerStructure", "technicalDepth"],
-  2: ["technicalDepth", "offerStructure"],
-  3: ["operationalCredibility", "technicalDepth"],
-  4: ["operationalCredibility", "technicalDepth"],
-  5: ["buyerRiskReduction", "operationalCredibility"],
-};
-
-const RECOGNIZED_LABS = [
-  "sgs egypt",
-  "sgs",
-  "agq labs egypt",
-  "agq labs",
-  "agq",
-  "zi-7 food testing lab",
-  "zi-7",
-  "zi 7",
-  "zi7",
-  "food testing lab",
-];
-
-// =====================
-// HELPERS
-// =====================
+const MAX_SCORE = 3;
 
 function clampScore(value: number): number {
-  return Math.max(0, Math.min(3, value));
+  return Math.max(0, Math.min(MAX_SCORE, value));
 }
 
-function uniqueReasons(reasons: string[]): string[] {
-  return [...new Set(reasons)];
+function normalizeText(text: string): string {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/[“”]/g, '"')
+    .replace(/[’]/g, "'")
+    .trim();
 }
 
-function hasAny(text: string, signals: string[]): boolean {
-  return signals.some((signal) => text.includes(signal));
+function lower(text: string): string {
+  return normalizeText(text).toLowerCase();
 }
 
-function countHits(text: string, signals: string[]): number {
-  return signals.filter((signal) => text.includes(signal)).length;
+function wordCount(text: string): number {
+  const words = normalizeText(text).split(/\s+/).filter(Boolean);
+  return words.length;
 }
 
-function isKeywordStuffing(text: string): boolean {
-  const trimmed = text.trim();
-  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
-  const commaCount = (trimmed.match(/,/g) || []).length;
+function hasAny(text: string, patterns: RegExp[]): boolean {
+  return patterns.some((pattern) => pattern.test(text));
+}
 
-  const hasVerb =
-    /\b(is|are|have|has|commit|offer|offers|provide|provides|guarantee|guarantees|test|tests|tested|block|blocks|replace|replaces|release|releases|ship|ships|control|controls|check|checks|explain|confirm)\b/.test(
-      trimmed
-    );
+function extractIncoterm(text: string): ExtractedMemory["incoterm"] | undefined {
+  if (/\bEXW\b/i.test(text) || /\bEx Works\b/i.test(text)) return "EXW";
+  if (/\bFOB\b/i.test(text) || /\bFree On Board\b/i.test(text)) return "FOB";
+  if (/\bCIF\b/i.test(text)) return "CIF";
+  if (/\bCFR\b/i.test(text)) return "CFR";
+  return undefined;
+}
 
-  const keywordSignals = [
-    "brix",
-    "iqf",
-    "insurance",
-    "replacement",
-    "fob",
-    "process",
-    "tons",
-    "quality",
-    "conformity",
-    "reliability",
-    "size",
-    "control",
+function extractProducerName(text: string): string | undefined {
+  const producerPatterns = [
+    /\bproducer\s*[:\-]?\s*([A-Z][A-Za-z0-9&.\- ]{2,40})/i,
+    /\bproduced by\s+([A-Z][A-Za-z0-9&.\- ]{2,40})/i,
+    /\bfrom producer\s+([A-Z][A-Za-z0-9&.\- ]{2,40})/i,
+    /\bthe producer\s+is\s+([A-Z][A-Za-z0-9&.\- ]{2,40})/i,
   ];
 
-  const keywordHits = keywordSignals.filter((signal) =>
-    trimmed.includes(signal)
-  ).length;
-
-  const hasSentenceStructure = /[.?!]/.test(trimmed);
-  const hasConnector =
-    /\b(and|with|because|therefore|which|that|before|after|under|in case)\b/.test(
-      trimmed
-    );
-
-  return (
-    keywordHits >= 6 &&
-    wordCount <= 20 &&
-    (!hasVerb || (!hasSentenceStructure && !hasConnector)) &&
-    commaCount >= 3
-  );
-}
-
-// =====================
-// MEMORY EXTRACTION
-// =====================
-
-function extractMemory(
-  userAnswer: string,
-  previous?: ConversationMemory
-): ConversationMemory {
-  const text = userAnswer.toLowerCase();
-  const memory: ConversationMemory = { ...previous };
-
-  const producerMatch =
-    userAnswer.match(/producer called\s+([A-Za-z0-9&.\- ]{2,60})/i) ||
-    userAnswer.match(/processor called\s+([A-Za-z0-9&.\- ]{2,60})/i) ||
-    userAnswer.match(/producer is\s+([A-Za-z0-9&.\- ]{2,60})/i) ||
-    userAnswer.match(/processor is\s+([A-Za-z0-9&.\- ]{2,60})/i);
-
-  if (producerMatch?.[1]) {
-    memory.producerName = producerMatch[1].trim();
-  }
-
-  if (/\bex works\b|\bexw\b/i.test(text)) {
-    memory.incoterm = "EXW";
-  } else if (/\bfob\b/i.test(text)) {
-    memory.incoterm = "FOB";
-  } else if (/\bcif\b/i.test(text)) {
-    memory.incoterm = "CIF";
-  }
-
-  if (
-    /egyptian jurisdiction|jurisdiction is egyptian|governed by egyptian law/i.test(
-      text
-    )
-  ) {
-    memory.jurisdiction = "Egyptian";
-  }
-
-  return memory;
-}
-
-// =====================
-// SCORING
-// =====================
-
-function scoreAnswer(userAnswer: string): {
-  scores: BoreasScores;
-  reasons: string[];
-} {
-  const text = userAnswer.toLowerCase();
-  const reasons: string[] = [];
-
-  if (isKeywordStuffing(text)) {
-    reasons.push("Keyword stuffing detected");
-    return {
-      scores: {
-        offerStructure: 0,
-        technicalDepth: 0,
-        operationalCredibility: 0,
-        buyerRiskReduction: 0,
-      },
-      reasons,
-    };
-  }
-
-  let offerStructure = 0;
-  let technicalDepth = 0;
-  let operationalCredibility = 0;
-  let buyerRiskReduction = 0;
-
-  // ---------------------
-  // OFFER STRUCTURE
-  // ---------------------
-
-  const hasProduct =
-    /\bstrawberry\b|\bstrawberries\b/.test(text) ||
-    /\biqf strawberry\b|\biqf strawberries\b/.test(text);
-
-  const hasOrigin = /\begypt\b|\begyptian\b/.test(text);
-
-  const hasPrice =
-    /\b\d+(?:[.,]\d+)?\s?(usd|eur|€|\$)(?:\/kg| per kg)?\b/.test(text) ||
-    /\bprice\b/.test(text);
-
-  const hasVolume =
-    /\b\d+\s?(tons|ton|containers|container)\b/.test(text) ||
-    /\bavailable\b/.test(text);
-
-  const hasCommercialBasis =
-    /\bex works\b|\bexw\b|\bfob\b|\bcif\b/i.test(text);
-
-  if (hasProduct) {
-    offerStructure++;
-    reasons.push("Product identified");
-  }
-
-  if (hasOrigin) {
-    offerStructure++;
-    reasons.push("Origin identified");
-  }
-
-  if (hasPrice || hasVolume || hasCommercialBasis) {
-    offerStructure++;
-    reasons.push("Commercial offer structure identified");
-  }
-
-  // ---------------------
-  // TECHNICAL DEPTH
-  // ---------------------
-
-  const hasBrix = /\bbrix\b/.test(text);
-
-  const hasSizing =
-    /\b\d{1,3}\s?-\s?\d{1,3}\s?(mm|cm)\b/.test(text) ||
-    /\b\d{1,3}\s?(mm|cm)\b/.test(text) ||
-    /\b\d{1,3}\s?x\s?\d{1,3}\s?(mm|cm)\b/.test(text) ||
-    /\bdiced\b/.test(text) ||
-    /\bcube\b|\bcubes\b/.test(text);
-
-  const hasDefectOrPackSignals =
-    /\bdefect\b|\bdefects\b|\btolerance\b|\bbroken\b|\bpacking\b|\bpacked\b|\bcarton\b|\bcartons\b|\bvariety\b|\biqf\b/.test(
-      text
-    );
-
-  if (hasBrix) {
-    technicalDepth++;
-    reasons.push("Brix mentioned");
-  }
-
-  if (hasSizing) {
-    technicalDepth++;
-    reasons.push("Sizing mentioned");
-  }
-
-  if (hasDefectOrPackSignals) {
-    technicalDepth++;
-    reasons.push("Technical specs mentioned");
-  }
-
-  // ---------------------
-  // OPERATIONAL CREDIBILITY
-  // ---------------------
-
-  const volumeSignals = [
-    "ton",
-    "tons",
-    "container",
-    "containers",
-    "shipment",
-    "shipments",
-  ];
-
-  const processSignals = [
-    "process",
-    "processing",
-    "control",
-    "controls",
-    "sorting",
-    "pre-cooling",
-    "precooling",
-    "tunnel",
-    "mechanical tunnel",
-    "drying",
-    "single-layer feeding",
-    "single layer feeding",
-    "lot",
-    "traceability",
-    "pre-shipment",
-    "pre shipment",
-  ];
-
-  const operationalHits =
-    countHits(text, volumeSignals) + countHits(text, processSignals);
-
-  if (hasAny(text, volumeSignals) || hasAny(text, processSignals)) {
-    operationalCredibility++;
-    reasons.push("Process mentioned");
-  }
-
-  if (operationalHits >= 3) {
-    operationalCredibility++;
-    reasons.push("Operational control depth detected");
-  }
-
-  if (/\bproducer\b|\bprocessor\b|\bfactory\b|\bfacility\b/.test(text)) {
-    operationalCredibility++;
-    reasons.push("Production setup mentioned");
-  }
-
-  // ---------------------
-  // BUYER RISK REDUCTION
-  // ---------------------
-
-  const hasInsurance = /\binsurance\b|\binsured\b/.test(text);
-
-  const hasReplacement =
-    /\breplacement\b|\breplace\b|\breplaced\b/.test(text);
-
-  const hasCompensation =
-    /\bcredit note\b|\bcompensation\b|\bliability\b|\bpenalty\b/.test(text);
-
-  const hasTestingAction =
-    /\btested\b|\btest\b|\btesting\b|\banalysis\b|\blaboratory\b|\beach lot\b|\bbefore shipment\b|\brelease\b|\breleased\b/.test(
-      text
-    );
-
-  const hasRecognizedLab = RECOGNIZED_LABS.some((lab) => text.includes(lab));
-
-  const hasPesticideControl =
-    /\bpesticide\b|\bpesticides\b|\bresidue\b|\bresidues\b/.test(text);
-
-  if (hasInsurance) {
-    buyerRiskReduction++;
-    reasons.push("Insurance mentioned");
-  }
-
-  if (hasReplacement) {
-    buyerRiskReduction++;
-    reasons.push("Replacement mentioned");
-  }
-
-  if (hasRecognizedLab) {
-    buyerRiskReduction++;
-    reasons.push("Recognized lab mentioned");
-  }
-
-  if (hasTestingAction || hasCompensation || hasPesticideControl) {
-    buyerRiskReduction++;
-    reasons.push("Compliance control mentioned");
-  }
-
-  if (hasRecognizedLab && (hasTestingAction || hasPesticideControl)) {
-    buyerRiskReduction++;
-    reasons.push("Structured lab testing process");
-  }
-
-  return {
-    scores: {
-      offerStructure: clampScore(offerStructure),
-      technicalDepth: clampScore(technicalDepth),
-      operationalCredibility: clampScore(operationalCredibility),
-      buyerRiskReduction: clampScore(buyerRiskReduction),
-    },
-    reasons: uniqueReasons(reasons),
-  };
-}
-
-// =====================
-// SCORE MERGE
-// =====================
-
-function mergeScores(
-  previous: BoreasScores | undefined,
-  current: BoreasScores
-): BoreasScores {
-  if (!previous) return current;
-
-  return {
-    offerStructure: Math.max(previous.offerStructure, current.offerStructure),
-    technicalDepth: Math.max(previous.technicalDepth, current.technicalDepth),
-    operationalCredibility: Math.max(
-      previous.operationalCredibility,
-      current.operationalCredibility
-    ),
-    buyerRiskReduction: Math.max(
-      previous.buyerRiskReduction,
-      current.buyerRiskReduction
-    ),
-  };
-}
-
-// =====================
-// STEP LOGIC
-// =====================
-
-function getPriorityDimensions(step: Step): ScoreDimension[] {
-  return STEP_PRIORITY[step];
-}
-
-function getCurrentStepScore(scores: BoreasScores, step: Step): number {
-  const dims = getPriorityDimensions(step);
-  return Math.min(...dims.map((d) => scores[d]));
-}
-
-function didPassStep(scores: BoreasScores, step: Step): boolean {
-  return getCurrentStepScore(scores, step) >= STEP_THRESHOLDS[step];
-}
-
-// =====================
-// WEAKNESS & STYLE
-// =====================
-
-function getDominantWeakness(
-  scores: BoreasScores,
-  step: Step
-): ScoreDimension {
-  const dims = getPriorityDimensions(step);
-
-  return dims.reduce((weakest, current) => {
-    if (scores[current] < scores[weakest]) {
-      return current;
+  for (const pattern of producerPatterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      return match[1].trim().replace(/[.,;:]$/, "");
     }
-    return weakest;
-  }, dims[0]);
+  }
+
+  const knownProducers = ["Givrex", "Dakahlia", "El Marwa", "Frozena"];
+  for (const producer of knownProducers) {
+    if (new RegExp(`\\b${producer}\\b`, "i").test(text)) {
+      return producer;
+    }
+  }
+
+  return undefined;
 }
 
-function getBuyerStyle(scores: BoreasScores): BuyerStyle {
+function getStepThreshold(currentStep: number): number {
+  return 2;
+}
+
+function getPriorityDimensions(currentStep: number): ScoreKey[] {
+  switch (currentStep) {
+    case 1:
+      return ["offerStructure", "technicalDepth"];
+    case 2:
+      return ["technicalDepth", "offerStructure"];
+    case 3:
+      return ["technicalDepth", "offerStructure"];
+    case 4:
+      return ["operationalCredibility", "technicalDepth"];
+    case 5:
+      return ["buyerRiskReduction", "operationalCredibility"];
+    default:
+      return ["offerStructure", "technicalDepth"];
+  }
+}
+
+function getExpectedBuyerReaction(
+  currentStep: number,
+  memory: ExtractedMemory
+): ExpectedBuyerReaction {
+  switch (currentStep) {
+    case 1:
+      return {
+        toneLine: "Your offer remains unclear and incomplete.",
+        questionLine:
+          "Present your offer clearly with product, origin, price basis, and available volume.",
+      };
+    case 2:
+      return {
+        toneLine: "Technical precision is insufficient.",
+        questionLine:
+          "Detail technical specs: Brix, sizing, defects, packing, and product format.",
+      };
+    case 3:
+      return {
+        toneLine: "Industrial consistency is not demonstrated.",
+        questionLine:
+          "Explain how you ensure consistency in raw material, processing, and packed goods across shipments.",
+      };
+    case 4:
+      return memory.producerName
+        ? {
+            toneLine: "Operational reliability is not demonstrated.",
+            questionLine: `The producer ${memory.producerName} is noted. Describe your production and quality control system in concrete terms.`,
+          }
+        : {
+            toneLine: "Operational reliability is not demonstrated.",
+            questionLine: "Describe your production and quality control system.",
+          };
+    case 5:
+      return memory.incoterm === "EXW"
+        ? {
+            toneLine: "Risk coverage is not acceptable.",
+            questionLine:
+              "Your Ex Works position is understood. Explain what concrete protections, compensation terms, and risk-mitigation mechanisms you offer despite that structure.",
+          }
+        : {
+            toneLine: "Risk coverage is not acceptable.",
+            questionLine:
+              "Explain why this supply is commercially reliable and what concrete guarantees protect the buyer.",
+          };
+    default:
+      return {
+        toneLine: "The answer remains insufficient.",
+        questionLine: "Clarify your position in concrete business terms.",
+      };
+  }
+}
+
+function computeBuyerStyle(scores: Scores): BuyerStyle {
   const total =
     scores.offerStructure +
     scores.technicalDepth +
     scores.operationalCredibility +
     scores.buyerRiskReduction;
 
-  if (total <= 3) return "disqualifying";
-  if (total <= 7) return "analytical";
+  if (total <= 2) return "disqualifying";
+  if (total <= 8) return "analytical";
   return "strategic";
 }
 
-// =====================
-// BUYER REACTION
-// =====================
+function detectOfferStructureSignals(text: string, reasons: string[], scores: Scores) {
+  const productMentioned = hasAny(text, [
+    /\bstrawberry\b/i,
+    /\bstrawberries\b/i,
+    /\biqf strawberry\b/i,
+    /\biqf strawberries\b/i,
+  ]);
 
-function buildExpectedBuyerReaction(
-  step: Step,
-  weakness: ScoreDimension,
-  memory: ConversationMemory
-): {
-  toneLine: string;
-  questionLine: string;
-  objectionLine?: string;
-} {
-  const toneMap: Record<ScoreDimension, string> = {
-    offerStructure: "Your offer remains unclear and incomplete.",
-    technicalDepth: "Technical precision is insufficient.",
-    operationalCredibility: "Operational reliability is not demonstrated.",
-    buyerRiskReduction: "Risk coverage is not acceptable.",
-  };
+  const originMentioned = hasAny(text, [/\begypt\b/i, /\begyptian\b/i]);
 
-  let questionLine = "";
+  const commercialBasisMentioned = hasAny(text, [
+    /\bFOB\b/i,
+    /\bEXW\b/i,
+    /\bCIF\b/i,
+    /\bCFR\b/i,
+    /\bUSD\b/i,
+    /\beur\b/i,
+    /\bprice\b/i,
+    /\boffer\b/i,
+  ]);
 
-  if (step === 1) {
-    questionLine =
-      "Present your offer clearly with product, origin, price basis, and available volume.";
-  } else if (step === 2) {
-    questionLine =
-      "Detail technical specs: Brix, sizing, defects, packing, and product format.";
-  } else if (step === 3) {
-    questionLine =
-      "Explain how you ensure consistency from lot to lot and across shipped volumes.";
-  } else if (step === 4) {
-    questionLine = memory.producerName
-      ? `The producer ${memory.producerName} is noted. Describe your production and quality control system in concrete terms.`
-      : "Describe your production and quality control system.";
-  } else if (step === 5) {
-    questionLine =
-      memory.incoterm === "EXW"
-        ? "Your Ex Works position is understood. Explain what concrete protections, compensation terms, and risk-mitigation mechanisms you offer despite that structure."
-        : "Explain why this supply is commercially reliable and what concrete guarantees protect the buyer.";
+  const volumeMentioned = hasAny(text, [
+    /\b\d+\s*(mt|tons?|tonnes?)\b/i,
+    /\bavailable volume\b/i,
+    /\bcontainer\b/i,
+  ]);
+
+  if (productMentioned) {
+    reasons.push("Product identified");
+    scores.offerStructure += 1;
   }
 
-  return {
-    toneLine: toneMap[weakness],
-    questionLine,
-  };
+  if (originMentioned) {
+    reasons.push("Origin identified");
+    scores.offerStructure += 1;
+  }
+
+  if (commercialBasisMentioned || volumeMentioned) {
+    reasons.push("Commercial offer structure identified");
+    scores.offerStructure += 1;
+  }
 }
 
-// =====================
-// MAIN FUNCTION
-// =====================
+function detectTechnicalSignals(text: string, reasons: string[], scores: Scores) {
+  const brixMentioned = hasAny(text, [/\bbrix\b/i, /\b\d{1,2}\s*°?\s*brix\b/i]);
+  const sizingMentioned = hasAny(text, [
+    /\b\d{1,2}\s*-\s*\d{1,2}\s*mm\b/i,
+    /\b\d{1,2}\s*mm\b/i,
+    /\bcm\b/i,
+    /\bdiced\b/i,
+    /\bcubes?\b/i,
+    /\bsize\b/i,
+    /\bsizing\b/i,
+  ]);
+  const technicalSpecsMentioned = hasAny(text, [
+    /\bdefects?\b/i,
+    /\bpacking\b/i,
+    /\bpackaging\b/i,
+    /\bformat\b/i,
+    /\bmoisture\b/i,
+    /\bcolor\b/i,
+    /\brix\b/i,
+    /\bcaliber\b/i,
+  ]);
 
-export function evaluateAnswer(input: EvaluatorInput): EvaluatorOutput {
-  const {
-    userAnswer,
-    currentStep,
-    previousScores,
-    conversationMemory,
-  } = input;
+  if (brixMentioned) {
+    reasons.push("Brix mentioned");
+    scores.technicalDepth += 1;
+  }
 
-  const extractedMemory = extractMemory(userAnswer, conversationMemory);
-  const { scores: rawScores, reasons } = scoreAnswer(userAnswer);
-  const scores = mergeScores(previousScores, rawScores);
-  const didPass = didPassStep(scores, currentStep);
+  if (sizingMentioned) {
+    reasons.push("Sizing mentioned");
+    scores.technicalDepth += 1;
+  }
 
-  const nextStep =
-    didPass && currentStep < 5 ? ((currentStep + 1) as Step) : currentStep;
+  if (technicalSpecsMentioned) {
+    reasons.push("Technical specs mentioned");
+    scores.technicalDepth += 1;
+  }
+}
 
-  const dominantWeakness = getDominantWeakness(scores, currentStep);
-  const buyerStyle = getBuyerStyle(scores);
+function detectOperationalSignals(text: string, reasons: string[], scores: Scores) {
+  const processMentioned = hasAny(text, [
+    /\bprocess\b/i,
+    /\bprocessed\b/i,
+    /\bsorting\b/i,
+    /\bgrading\b/i,
+    /\bmetal detector\b/i,
+    /\boptical sorting\b/i,
+    /\btraceability\b/i,
+    /\bpre-shipment\b/i,
+  ]);
 
-  const expectedBuyerReaction = buildExpectedBuyerReaction(
-    currentStep,
-    dominantWeakness,
-    extractedMemory
+  const controlDepthMentioned = hasAny(text, [
+    /\btraceability\b/i,
+    /\bbatch\b/i,
+    /\blot\b/i,
+    /\bqa\b/i,
+    /\bqc\b/i,
+    /\bquality control\b/i,
+    /\binspection\b/i,
+  ]);
+
+  const complianceMentioned = hasAny(text, [
+    /\bconformity\b/i,
+    /\bcompliance\b/i,
+    /\banalysis\b/i,
+    /\bcoa\b/i,
+    /\bcertificate\b/i,
+    /\bpesticide\b/i,
+    /\bresidue\b/i,
+  ]);
+
+  const recognizedLabMentioned = hasAny(text, [
+    /\bsgs egypt\b/i,
+    /\bsgs\b/i,
+    /\bagq\b/i,
+    /\bzi-?7\b/i,
+  ]);
+
+  const structuredLabTesting = recognizedLabMentioned && hasAny(text, [
+    /\btested\b/i,
+    /\banalysis\b/i,
+    /\breport\b/i,
+    /\blab\b/i,
+    /\bpesticide\b/i,
+    /\bresidue\b/i,
+  ]);
+
+  if (processMentioned) {
+    reasons.push("Process mentioned");
+    scores.operationalCredibility += 1;
+  }
+
+  if (controlDepthMentioned) {
+    reasons.push("Operational control depth detected");
+    scores.operationalCredibility += 1;
+  }
+
+  if (complianceMentioned) {
+    reasons.push("Compliance control mentioned");
+  }
+
+  if (recognizedLabMentioned) {
+    reasons.push("Recognized lab mentioned");
+  }
+
+  if (structuredLabTesting) {
+    reasons.push("Structured lab testing process");
+  }
+}
+
+function detectRiskReductionSignals(text: string, reasons: string[], scores: Scores) {
+  const insuranceMentioned = hasAny(text, [
+    /\binsurance\b/i,
+    /\binsured\b/i,
+    /\bcovered\b/i,
+  ]);
+
+  const replacementMentioned = hasAny(text, [
+    /\breplacement\b/i,
+    /\breplace\b/i,
+    /\bcompensation\b/i,
+    /\bcredit note\b/i,
+    /\bclaim\b/i,
+  ]);
+
+  const guaranteeMentioned = hasAny(text, [
+    /\bguarantee\b/i,
+    /\bprotect\b/i,
+    /\brisk mitigation\b/i,
+    /\bsupport\b/i,
+    /\bresponsibility\b/i,
+  ]);
+
+  if (insuranceMentioned) {
+    reasons.push("Insurance mentioned");
+    scores.buyerRiskReduction += 1;
+  }
+
+  if (replacementMentioned) {
+    reasons.push("Replacement mentioned");
+    scores.buyerRiskReduction += 1;
+  }
+
+  if (guaranteeMentioned) {
+    scores.buyerRiskReduction += 1;
+  }
+}
+
+function detectCorrectiveActionBonus(
+  text: string,
+  reasons: string[],
+  scores: Scores
+): boolean {
+  const incidentDetected = hasAny(text, [
+    /\bpesticide incident\b/i,
+    /\bincident\b/i,
+    /\bissue\b/i,
+    /\bnon-?conformity\b/i,
+    /\brejection\b/i,
+    /\bfailure\b/i,
+  ]);
+
+  const correctiveActionPresent = hasAny(text, [
+    /\bcorrective action\b/i,
+    /\bwe corrected\b/i,
+    /\bwe stopped\b/i,
+    /\bwe changed\b/i,
+    /\bwe reinforced\b/i,
+    /\bwe implemented\b/i,
+    /\bwe reviewed\b/i,
+    /\broot cause\b/i,
+  ]);
+
+  const recognizedLabMentioned = reasons.includes("Recognized lab mentioned");
+  const processDescribed = reasons.includes("Process mentioned");
+
+  if (
+    incidentDetected &&
+    correctiveActionPresent &&
+    recognizedLabMentioned &&
+    processDescribed
+  ) {
+    scores.operationalCredibility += 1;
+    return true;
+  }
+
+  return false;
+}
+
+function detectKeywordStuffing({
+  reasons,
+  scores,
+  text,
+}: {
+  reasons: string[];
+  scores: Scores;
+  text: string;
+}): boolean {
+  const stuffingSensitiveSignals = [
+    "Commercial offer structure identified",
+    "Brix mentioned",
+    "Technical specs mentioned",
+    "Process mentioned",
+    "Operational control depth detected",
+    "Insurance mentioned",
+    "Replacement mentioned",
+    "Compliance control mentioned",
+    "Structured lab testing process",
+  ];
+
+  const detectedSignals = reasons.filter((reason) =>
+    stuffingSensitiveSignals.includes(reason)
   );
+
+  const totalWords = wordCount(text);
+
+  const repeatedKeywordHits = [
+    (text.match(/\bbrix\b/gi) || []).length,
+    (text.match(/\bprocess\b/gi) || []).length,
+    (text.match(/\btraceability\b/gi) || []).length,
+    (text.match(/\binsurance\b/gi) || []).length,
+    (text.match(/\breplacement\b/gi) || []).length,
+    (text.match(/\bquality\b/gi) || []).length,
+  ].reduce((sum, count) => sum + count, 0);
+
+  const numericSupportCount = [
+    /\b\d+\s*mm\b/gi,
+    /\b\d+\s*-\s*\d+\s*mm\b/gi,
+    /\b\d+\s*(mt|tons?|tonnes?)\b/gi,
+    /\b\d{1,2}\s*°?\s*brix\b/gi,
+    /\b\d+\s*kg\b/gi,
+  ].reduce((sum, regex) => sum + ((text.match(regex) || []).length), 0);
+
+  const connectionWordsCount = [
+    /\bbecause\b/gi,
+    /\btherefore\b/gi,
+    /\bso that\b/gi,
+    /\bas a result\b/gi,
+    /\bin order to\b/gi,
+    /\bwhich means\b/gi,
+  ].reduce((sum, regex) => sum + ((text.match(regex) || []).length), 0);
+
+  const tooManySignals = detectedSignals.length >= 5;
+  const lowSubstance =
+    totalWords < 120 ||
+    (scores.technicalDepth <= 2 && scores.buyerRiskReduction <= 2);
+  const weakSupport = numericSupportCount <= 1 && connectionWordsCount === 0;
+  const suspiciousRepetition = repeatedKeywordHits >= 6;
+
+  return tooManySignals && lowSubstance && (weakSupport || suspiciousRepetition);
+}
+
+function getDominantWeakness(
+  scores: Scores,
+  priorityDimensions: ScoreKey[]
+): ScoreKey {
+  const [firstPriority, secondPriority] = priorityDimensions;
+
+  if (scores[firstPriority] <= scores[secondPriority]) {
+    return firstPriority;
+  }
+
+  return secondPriority;
+}
+
+function getCurrentStepScore(scores: Scores, currentStep: number): number {
+  switch (currentStep) {
+    case 1:
+      return Math.min(scores.offerStructure, scores.technicalDepth);
+    case 2:
+      return scores.technicalDepth;
+    case 3:
+      return Math.min(scores.technicalDepth, scores.offerStructure);
+    case 4:
+      return scores.operationalCredibility;
+    case 5:
+      return scores.buyerRiskReduction;
+    default:
+      return 0;
+  }
+}
+
+function getNextStep(currentStep: number, didPassStep: boolean): number {
+  if (!didPassStep) return currentStep;
+  return Math.min(5, currentStep + 1);
+}
+
+export function evaluateResponse(input: EvaluateInput): EvaluatorResult {
+  const rawText = input.text ?? "";
+  const text = normalizeText(rawText);
+  const lcText = lower(text);
+  const currentStep = input.currentStep;
+
+  const scores: Scores = {
+    offerStructure: 0,
+    technicalDepth: 0,
+    operationalCredibility: 0,
+    buyerRiskReduction: 0,
+  };
+
+  const reasons: string[] = [];
+  const extractedMemory: ExtractedMemory = {
+    incoterm: extractIncoterm(text),
+    producerName: extractProducerName(text),
+  };
+
+  detectOfferStructureSignals(lcText, reasons, scores);
+  detectTechnicalSignals(lcText, reasons, scores);
+  detectOperationalSignals(lcText, reasons, scores);
+  detectRiskReductionSignals(lcText, reasons, scores);
+
+  const correctiveActionBoosted = detectCorrectiveActionBonus(lcText, reasons, scores);
+
+  scores.offerStructure = clampScore(scores.offerStructure);
+  scores.technicalDepth = clampScore(scores.technicalDepth);
+  scores.operationalCredibility = clampScore(scores.operationalCredibility);
+  scores.buyerRiskReduction = clampScore(scores.buyerRiskReduction);
+
+  const priorityDimensions = getPriorityDimensions(currentStep);
+  let dominantWeakness = getDominantWeakness(scores, priorityDimensions);
+  const thresholdForStep = getStepThreshold(currentStep);
+  let currentStepScore = getCurrentStepScore(scores, currentStep);
+  let didPassStep = currentStepScore >= thresholdForStep;
+  let nextStep = getNextStep(currentStep, didPassStep);
+
+  const keywordStuffingDetected = detectKeywordStuffing({
+    reasons,
+    scores,
+    text: lcText,
+  });
+
+  if (keywordStuffingDetected) {
+    scores.technicalDepth = clampScore(scores.technicalDepth - 1);
+    scores.buyerRiskReduction = clampScore(scores.buyerRiskReduction - 1);
+
+    dominantWeakness = "buyerRiskReduction";
+    currentStepScore = getCurrentStepScore(scores, currentStep);
+    didPassStep = false;
+    nextStep = currentStep;
+
+    reasons.push("Multiple claims detected without sufficient supporting detail");
+  }
+
+  if (correctiveActionBoosted && currentStep === 4) {
+    currentStepScore = getCurrentStepScore(scores, currentStep);
+
+    if (currentStepScore >= thresholdForStep) {
+      didPassStep = true;
+      nextStep = 5;
+    }
+  }
+
+  let buyerStyle = computeBuyerStyle(scores);
+
+  if (correctiveActionBoosted && currentStep === 4 && didPassStep) {
+    buyerStyle = "analytical";
+  }
+
+  if (currentStep === 5 && keywordStuffingDetected) {
+    buyerStyle = "strategic";
+  }
+
+  if (currentStep === 1 && currentStepScore === 0) {
+    buyerStyle = "disqualifying";
+  }
+
+  const expectedBuyerReaction = getExpectedBuyerReaction(currentStep, extractedMemory);
 
   return {
     scores,
-    didPassStep: didPass,
+    didPassStep,
     nextStep,
     dominantWeakness,
-    priorityDimensions: getPriorityDimensions(currentStep),
+    priorityDimensions,
     buyerStyle,
     expectedBuyerReaction,
     extractedMemory,
+    evaluationSignals: {
+      keywordStuffingDetected,
+    },
     debug: {
-      thresholdForStep: STEP_THRESHOLDS[currentStep],
-      currentStepScore: getCurrentStepScore(scores, currentStep),
+      thresholdForStep,
+      currentStepScore,
       reasons,
     },
   };
