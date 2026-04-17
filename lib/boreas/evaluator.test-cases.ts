@@ -122,7 +122,7 @@ export const evaluatorTestCases: BoreasTestCase[] = [
     expected: {
       didPassStep: true,
       nextStep: 5,
-      dominantWeakness: "operationalCredibility",
+      dominantWeakness: "technicalDepth",
       buyerStyle: "analytical",
       extractedMemory: {
         producerName: "Givrex",
@@ -143,7 +143,7 @@ export const evaluatorTestCases: BoreasTestCase[] = [
     expected: {
       didPassStep: true,
       nextStep: 5,
-      dominantWeakness: "operationalCredibility",
+      dominantWeakness: "technicalDepth",
       buyerStyle: "analytical",
       mustIncludeReasons: ["Process mentioned"],
     },
@@ -193,7 +193,7 @@ export const evaluatorTestCases: BoreasTestCase[] = [
     expected: {
       didPassStep: true,
       nextStep: 5,
-      dominantWeakness: "operationalCredibility",
+      dominantWeakness: "buyerRiskReduction",
       buyerStyle: "strategic",
       extractedMemory: {
         incoterm: "FOB",
