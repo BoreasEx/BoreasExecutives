@@ -6,12 +6,17 @@ export type ScoreKey =
   | "operationalCredibility"
   | "buyerRiskReduction";
 
+export type Step = 1 | 2 | 3 | 4 | 5;
+export type ScoreDimension = ScoreKey;
+
 export type Scores = {
   offerStructure: number;
   technicalDepth: number;
   operationalCredibility: number;
   buyerRiskReduction: number;
 };
+
+export type BoreasScores = Scores;
 
 export type ExpectedBuyerReaction = {
   toneLine: string;
@@ -22,6 +27,8 @@ export type ExtractedMemory = {
   incoterm?: "EXW" | "FOB" | "CIF" | "CFR";
   producerName?: string;
 };
+
+export type ConversationMemory = ExtractedMemory;
 
 export type EvaluationSignals = {
   keywordStuffingDetected: boolean;
@@ -48,7 +55,16 @@ export type EvaluatorResult = {
 
 export type EvaluateInput = {
   text: string;
-  currentStep: 1 | 2 | 3 | 4 | 5;
+  currentStep: Step;
+  previousScores?: BoreasScores;
+  conversationMemory?: ConversationMemory;
+};
+
+export type EvaluateAnswerInput = {
+  currentStep: Step;
+  previousScores?: BoreasScores;
+  conversationMemory?: ConversationMemory;
+  userAnswer: string;
 };
 
 const MAX_SCORE = 3;
@@ -111,11 +127,19 @@ function extractProducerName(text: string): string | undefined {
   return undefined;
 }
 
-function getStepThreshold(currentStep: number): number {
-  return 2;
+function getStepThreshold(currentStep: Step): number {
+  switch (currentStep) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    default:
+      return 2;
+  }
 }
 
-function getPriorityDimensions(currentStep: number): ScoreKey[] {
+function getPriorityDimensions(currentStep: Step): ScoreKey[] {
   switch (currentStep) {
     case 1:
       return ["offerStructure", "technicalDepth"];
@@ -133,7 +157,7 @@ function getPriorityDimensions(currentStep: number): ScoreKey[] {
 }
 
 function getExpectedBuyerReaction(
-  currentStep: number,
+  currentStep: Step,
   memory: ExtractedMemory
 ): ExpectedBuyerReaction {
   switch (currentStep) {
@@ -213,7 +237,7 @@ function detectOfferStructureSignals(text: string, reasons: string[], scores: Sc
     /\bCIF\b/i,
     /\bCFR\b/i,
     /\bUSD\b/i,
-    /\beur\b/i,
+    /\bEUR\b/i,
     /\bprice\b/i,
     /\boffer\b/i,
   ]);
@@ -242,6 +266,7 @@ function detectOfferStructureSignals(text: string, reasons: string[], scores: Sc
 
 function detectTechnicalSignals(text: string, reasons: string[], scores: Scores) {
   const brixMentioned = hasAny(text, [/\bbrix\b/i, /\b\d{1,2}\s*°?\s*brix\b/i]);
+
   const sizingMentioned = hasAny(text, [
     /\b\d{1,2}\s*-\s*\d{1,2}\s*mm\b/i,
     /\b\d{1,2}\s*mm\b/i,
@@ -251,6 +276,7 @@ function detectTechnicalSignals(text: string, reasons: string[], scores: Scores)
     /\bsize\b/i,
     /\bsizing\b/i,
   ]);
+
   const technicalSpecsMentioned = hasAny(text, [
     /\bdefects?\b/i,
     /\bpacking\b/i,
@@ -258,7 +284,7 @@ function detectTechnicalSignals(text: string, reasons: string[], scores: Scores)
     /\bformat\b/i,
     /\bmoisture\b/i,
     /\bcolor\b/i,
-    /\brix\b/i,
+    /\bbrix\b/i,
     /\bcaliber\b/i,
   ]);
 
@@ -504,7 +530,7 @@ function getDominantWeakness(
   return secondPriority;
 }
 
-function getCurrentStepScore(scores: Scores, currentStep: number): number {
+function getCurrentStepScore(scores: Scores, currentStep: Step): number {
   switch (currentStep) {
     case 1:
       return Math.min(scores.offerStructure, scores.technicalDepth);
@@ -521,7 +547,7 @@ function getCurrentStepScore(scores: Scores, currentStep: number): number {
   }
 }
 
-function getNextStep(currentStep: number, didPassStep: boolean): number {
+function getNextStep(currentStep: Step, didPassStep: boolean): number {
   if (!didPassStep) return currentStep;
   return Math.min(5, currentStep + 1);
 }
@@ -533,16 +559,18 @@ export function evaluateResponse(input: EvaluateInput): EvaluatorResult {
   const currentStep = input.currentStep;
 
   const scores: Scores = {
-    offerStructure: 0,
-    technicalDepth: 0,
-    operationalCredibility: 0,
-    buyerRiskReduction: 0,
+    offerStructure: input.previousScores?.offerStructure ?? 0,
+    technicalDepth: input.previousScores?.technicalDepth ?? 0,
+    operationalCredibility: input.previousScores?.operationalCredibility ?? 0,
+    buyerRiskReduction: input.previousScores?.buyerRiskReduction ?? 0,
   };
 
   const reasons: string[] = [];
+
   const extractedMemory: ExtractedMemory = {
-    incoterm: extractIncoterm(text),
-    producerName: extractProducerName(text),
+    incoterm: extractIncoterm(text) ?? input.conversationMemory?.incoterm,
+    producerName:
+      extractProducerName(text) ?? input.conversationMemory?.producerName,
   };
 
   detectOfferStructureSignals(lcText, reasons, scores);
@@ -550,7 +578,11 @@ export function evaluateResponse(input: EvaluateInput): EvaluatorResult {
   detectOperationalSignals(lcText, reasons, scores);
   detectRiskReductionSignals(lcText, reasons, scores);
 
-  const correctiveActionBoosted = detectCorrectiveActionBonus(lcText, reasons, scores);
+  const correctiveActionBoosted = detectCorrectiveActionBonus(
+    lcText,
+    reasons,
+    scores
+  );
 
   scores.offerStructure = clampScore(scores.offerStructure);
   scores.technicalDepth = clampScore(scores.technicalDepth);
@@ -588,6 +620,7 @@ export function evaluateResponse(input: EvaluateInput): EvaluatorResult {
     if (currentStepScore >= thresholdForStep) {
       didPassStep = true;
       nextStep = 5;
+      dominantWeakness = getDominantWeakness(scores, priorityDimensions);
     }
   }
 
@@ -605,7 +638,10 @@ export function evaluateResponse(input: EvaluateInput): EvaluatorResult {
     buyerStyle = "disqualifying";
   }
 
-  const expectedBuyerReaction = getExpectedBuyerReaction(currentStep, extractedMemory);
+  const expectedBuyerReaction = getExpectedBuyerReaction(
+    currentStep,
+    extractedMemory
+  );
 
   return {
     scores,
@@ -625,4 +661,13 @@ export function evaluateResponse(input: EvaluateInput): EvaluatorResult {
       reasons,
     },
   };
+}
+
+export function evaluateAnswer(input: EvaluateAnswerInput): EvaluatorResult {
+  return evaluateResponse({
+    text: input.userAnswer,
+    currentStep: input.currentStep,
+    previousScores: input.previousScores,
+    conversationMemory: input.conversationMemory,
+  });
 }
