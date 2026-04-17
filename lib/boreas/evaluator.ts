@@ -106,14 +106,46 @@ function countHits(text: string, signals: string[]): number {
 }
 
 function isKeywordStuffing(text: string): boolean {
-  const commaCount = (text.match(/,/g) || []).length;
-  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  const trimmed = text.trim();
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+  const commaCount = (trimmed.match(/,/g) || []).length;
+
   const hasVerb =
-    /\b(is|are|have|has|commit|offer|offers|provide|provides|guarantee|guarantees|test|tests|tested|block|blocks|replace|replaces|release|releases|ship|ships|control|controls|check|checks)\b/.test(
-      text
+    /\b(is|are|have|has|commit|offer|offers|provide|provides|guarantee|guarantees|test|tests|tested|block|blocks|replace|replaces|release|releases|ship|ships|control|controls|check|checks|explain|confirm)\b/.test(
+      trimmed
     );
 
-  return commaCount >= 5 && wordCount <= 25 && !hasVerb;
+  const keywordSignals = [
+    "brix",
+    "iqf",
+    "insurance",
+    "replacement",
+    "fob",
+    "process",
+    "tons",
+    "quality",
+    "conformity",
+    "reliability",
+    "size",
+    "control",
+  ];
+
+  const keywordHits = keywordSignals.filter((signal) =>
+    trimmed.includes(signal)
+  ).length;
+
+  const hasSentenceStructure = /[.?!]/.test(trimmed);
+  const hasConnector =
+    /\b(and|with|because|therefore|which|that|before|after|under|in case)\b/.test(
+      trimmed
+    );
+
+  return (
+    keywordHits >= 6 &&
+    wordCount <= 20 &&
+    (!hasVerb || (!hasSentenceStructure && !hasConnector)) &&
+    commaCount >= 3
+  );
 }
 
 // =====================
@@ -193,8 +225,7 @@ function scoreAnswer(userAnswer: string): {
     /\bstrawberry\b|\bstrawberries\b/.test(text) ||
     /\biqf strawberry\b|\biqf strawberries\b/.test(text);
 
-  const hasOrigin =
-    /\begypt\b|\begyptian\b/.test(text);
+  const hasOrigin = /\begypt\b|\begyptian\b/.test(text);
 
   const hasPrice =
     /\b\d+(?:[.,]\d+)?\s?(usd|eur|€|\$)(?:\/kg| per kg)?\b/.test(text) ||
@@ -205,7 +236,7 @@ function scoreAnswer(userAnswer: string): {
     /\bavailable\b/.test(text);
 
   const hasCommercialBasis =
-    /\bex works\b|\bexw\b|\bfob\b|\bcif\b|\bex works\b/i.test(text);
+    /\bex works\b|\bexw\b|\bfob\b|\bcif\b/i.test(text);
 
   if (hasProduct) {
     offerStructure++;
@@ -283,10 +314,8 @@ function scoreAnswer(userAnswer: string): {
     "single layer feeding",
     "lot",
     "traceability",
-    "release",
     "pre-shipment",
     "pre shipment",
-    "conformity",
   ];
 
   const operationalHits =
@@ -302,9 +331,7 @@ function scoreAnswer(userAnswer: string): {
     reasons.push("Operational control depth detected");
   }
 
-  if (
-    /\bproducer\b|\bprocessor\b|\bfactory\b|\bfacility\b/.test(text)
-  ) {
+  if (/\bproducer\b|\bprocessor\b|\bfactory\b|\bfacility\b/.test(text)) {
     operationalCredibility++;
     reasons.push("Production setup mentioned");
   }
@@ -313,8 +340,7 @@ function scoreAnswer(userAnswer: string): {
   // BUYER RISK REDUCTION
   // ---------------------
 
-  const hasInsurance =
-    /\binsurance\b|\binsured\b/.test(text);
+  const hasInsurance = /\binsurance\b|\binsured\b/.test(text);
 
   const hasReplacement =
     /\breplacement\b|\breplace\b|\breplaced\b/.test(text);
@@ -327,9 +353,7 @@ function scoreAnswer(userAnswer: string): {
       text
     );
 
-  const hasRecognizedLab = RECOGNIZED_LABS.some((lab) =>
-    text.includes(lab)
-  );
+  const hasRecognizedLab = RECOGNIZED_LABS.some((lab) => text.includes(lab));
 
   const hasPesticideControl =
     /\bpesticide\b|\bpesticides\b|\bresidue\b|\bresidues\b/.test(text);
@@ -349,19 +373,12 @@ function scoreAnswer(userAnswer: string): {
     reasons.push("Recognized lab mentioned");
   }
 
-  if (
-    hasTestingAction ||
-    hasCompensation ||
-    hasPesticideControl
-  ) {
+  if (hasTestingAction || hasCompensation || hasPesticideControl) {
     buyerRiskReduction++;
     reasons.push("Compliance control mentioned");
   }
 
-  if (
-    hasRecognizedLab &&
-    (hasTestingAction || hasPesticideControl)
-  ) {
+  if (hasRecognizedLab && (hasTestingAction || hasPesticideControl)) {
     buyerRiskReduction++;
     reasons.push("Structured lab testing process");
   }
@@ -509,18 +526,14 @@ export function evaluateAnswer(input: EvaluatorInput): EvaluatorOutput {
   } = input;
 
   const extractedMemory = extractMemory(userAnswer, conversationMemory);
-
   const { scores: rawScores, reasons } = scoreAnswer(userAnswer);
-
   const scores = mergeScores(previousScores, rawScores);
-
   const didPass = didPassStep(scores, currentStep);
 
   const nextStep =
     didPass && currentStep < 5 ? ((currentStep + 1) as Step) : currentStep;
 
   const dominantWeakness = getDominantWeakness(scores, currentStep);
-
   const buyerStyle = getBuyerStyle(scores);
 
   const expectedBuyerReaction = buildExpectedBuyerReaction(

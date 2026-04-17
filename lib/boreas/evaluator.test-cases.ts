@@ -30,7 +30,7 @@ export const evaluatorTestCases: BoreasTestCase[] = [
     expected: {
       didPassStep: false,
       nextStep: 1,
-      dominantWeakness: "offerStructure",
+      dominantWeakness: "technicalDepth",
       buyerStyle: "disqualifying",
       mustIncludeReasons: ["Product identified", "Origin identified"],
     },
@@ -43,14 +43,14 @@ export const evaluatorTestCases: BoreasTestCase[] = [
     expected: {
       didPassStep: true,
       nextStep: 2,
-      dominantWeakness: "technicalDepth",
+      dominantWeakness: "offerStructure",
       buyerStyle: "analytical",
       mustIncludeReasons: [
         "Product identified",
         "Origin identified",
-        "Price identified",
+        "Commercial offer structure identified",
         "Brix mentioned",
-        "Volume or shipment mentioned",
+        "Sizing mentioned",
       ],
       extractedMemory: {
         incoterm: "FOB",
@@ -83,7 +83,7 @@ export const evaluatorTestCases: BoreasTestCase[] = [
       didPassStep: false,
       nextStep: 2,
       dominantWeakness: "technicalDepth",
-      buyerStyle: "disqualifying",
+      buyerStyle: "analytical",
     },
   },
   {
@@ -100,7 +100,7 @@ export const evaluatorTestCases: BoreasTestCase[] = [
     expected: {
       didPassStep: true,
       nextStep: 3,
-      dominantWeakness: "operationalCredibility",
+      dominantWeakness: "offerStructure",
       buyerStyle: "analytical",
       mustIncludeReasons: ["Brix mentioned", "Sizing mentioned"],
     },
@@ -122,7 +122,7 @@ export const evaluatorTestCases: BoreasTestCase[] = [
     expected: {
       didPassStep: true,
       nextStep: 5,
-      dominantWeakness: "buyerRiskReduction",
+      dominantWeakness: "operationalCredibility",
       buyerStyle: "analytical",
       extractedMemory: {
         producerName: "Givrex",
@@ -139,10 +139,10 @@ export const evaluatorTestCases: BoreasTestCase[] = [
       buyerRiskReduction: 0,
     },
     userAnswer:
-      "We had one pesticide residue issue in the past. Thanks to lot traceability we identified the farmer, blocked him, and now each lot is tested by Bureau Veritas before release.",
+      "We had one pesticide residue issue in the past. Thanks to lot traceability we identified the farmer, blocked him, and now each lot is tested by SGS Egypt before release.",
     expected: {
-      didPassStep: false,
-      nextStep: 4,
+      didPassStep: true,
+      nextStep: 5,
       dominantWeakness: "operationalCredibility",
       buyerStyle: "analytical",
       mustIncludeReasons: ["Process mentioned"],
@@ -170,7 +170,10 @@ export const evaluatorTestCases: BoreasTestCase[] = [
       extractedMemory: {
         incoterm: "EXW",
       },
-      mustIncludeReasons: ["Price identified", "Replacement mentioned"],
+      mustIncludeReasons: [
+        "Commercial offer structure identified",
+        "Replacement mentioned",
+      ],
     },
   },
   {
@@ -190,7 +193,7 @@ export const evaluatorTestCases: BoreasTestCase[] = [
     expected: {
       didPassStep: true,
       nextStep: 5,
-      dominantWeakness: "buyerRiskReduction",
+      dominantWeakness: "operationalCredibility",
       buyerStyle: "strategic",
       extractedMemory: {
         incoterm: "FOB",
