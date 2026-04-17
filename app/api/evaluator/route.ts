@@ -1,18 +1,16 @@
-import { evaluateResponse } from "@/lib/boreas/evaluator";
-import { evaluatorTestCases } from "@/lib/boreas/evaluator.test-cases";
-
-type BoreasRouteTestCase = {
-  name: string;
-  currentStep: 1 | 2 | 3 | 4 | 5;
-  sellerMessage: string;
-  expected: unknown;
-};
+import { evaluateAnswer } from "@/lib/boreas/evaluator";
+import {
+  evaluatorTestCases,
+  type BoreasTestCase,
+} from "@/lib/boreas/evaluator.test-cases";
 
 function runEvaluatorTests() {
-  return (evaluatorTestCases as unknown as BoreasRouteTestCase[]).map((testCase) => {
-    const output = evaluateResponse({
-      text: testCase.sellerMessage,
+  return evaluatorTestCases.map((testCase: BoreasTestCase) => {
+    const output = evaluateAnswer({
       currentStep: testCase.currentStep,
+      previousScores: testCase.previousScores,
+      conversationMemory: testCase.conversationMemory,
+      userAnswer: testCase.userAnswer,
     });
 
     return {
