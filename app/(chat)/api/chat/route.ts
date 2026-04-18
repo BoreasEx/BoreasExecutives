@@ -55,7 +55,6 @@ function getStreamContext() {
   }
 }
 
-
 function extractTextFromParts(
   parts: Array<Record<string, unknown>> | undefined
 ): string {
@@ -88,6 +87,7 @@ type TechnicalSignals = {
   hasIQF: boolean;
   hasForeignMaterial: boolean;
 };
+
 type NegotiationMemory = {
   producerName?: string;
   incoterm?: string;
@@ -129,7 +129,11 @@ function extractNegotiationMemory(
     incoterm = "CIF";
   }
 
-  if (/egyptian jurisdiction|jurisdiction is egyptian|governed by egyptian law/i.test(fullText)) {
+  if (
+    /egyptian jurisdiction|jurisdiction is egyptian|governed by egyptian law/i.test(
+      fullText
+    )
+  ) {
     jurisdiction = "Egyptian";
   }
 
@@ -253,7 +257,6 @@ function getPriorityDimensions(step: Step): Array<keyof EvaluationScores> {
       return ["buyerRiskReduction", "operationalCredibility"];
   }
 }
-
 
 function extractTechnicalSignals(message: string): TechnicalSignals {
   return {
@@ -448,6 +451,7 @@ function buildBoreasContext(
     questionLine =
       "Your Ex Works position is understood. Explain what concrete protections, compensation terms, and risk-mitigation mechanisms you offer despite that structure.";
   }
+
   return `BOREAS NEGOTIATION CONTEXT:
 - Current step: ${step}
 - Buyer style: ${style}
@@ -475,6 +479,7 @@ Behavior instructions:
 
 ${varietyContext}`.trim();
 }
+
 type CertificationStatus = "fail" | "borderline" | "pass" | "strong_pass";
 
 function getCertificationStatus(
@@ -498,9 +503,7 @@ function getCertificationStatus(
   return "strong_pass";
 }
 
-function getCertificationVerdict(
-  status: CertificationStatus
-): string {
+function getCertificationVerdict(status: CertificationStatus): string {
   switch (status) {
     case "fail":
       return "The offer does not meet basic industrial buyer requirements.";
@@ -626,6 +629,7 @@ export async function POST(request: Request) {
               ]) ?? []
         )
       );
+
       uiMessages = dbMessages.map((msg) => ({
         ...msg,
         parts: msg.parts.map((part) => {
@@ -635,6 +639,7 @@ export async function POST(request: Request) {
           ) {
             return { ...part, ...approvalStates.get(String(part.toolCallId)) };
           }
+
           return part;
         }),
       })) as ChatMessage[];
@@ -715,112 +720,113 @@ Express serious doubt, suspend validation, and require documented justification 
       }
     }
 
-const boreasScores = scoreConversation(uiMessages, lastUserMessageText);
-const currentStep = getCurrentStep(boreasScores);
-const certificationResult = buildCertificationResult(boreasScores);
-const boreasContext = buildBoreasContext(uiMessages, lastUserMessageText);
+    const boreasScores = scoreConversation(uiMessages, lastUserMessageText);
+    const currentStep = getCurrentStep(boreasScores);
+    const certificationResult = buildCertificationResult(boreasScores);
+    const boreasContext = buildBoreasContext(uiMessages, lastUserMessageText);
 
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
-execute: async ({ writer: dataStream }) => {
-  const result = streamText({
-    model: getLanguageModel(chatModel),
-    system: `${systemPrompt({ requestHints, supportsTools })}
+      execute: async ({ writer: dataStream }) => {
+        const result = streamText({
+          model: getLanguageModel(chatModel),
+          system: `${systemPrompt({ requestHints, supportsTools })}
 
 ${boreasContext}
 
 ${supplierContext}`.trim(),
-    messages: modelMessages,
-    stopWhen: stepCountIs(5),
-    experimental_activeTools:
-      isReasoningModel && !supportsTools
-        ? []
-        : [
-            "getWeather",
-            "createDocument",
-            "editDocument",
-            "updateDocument",
-            "requestSuggestions",
-          ],
-    providerOptions: {},
-    tools: {
-      getWeather,
-      createDocument: createDocument({
-        session,
-        dataStream,
-        modelId: chatModel,
-      }),
-      editDocument: editDocument({ dataStream, session }),
-      updateDocument: updateDocument({
-        session,
-        dataStream,
-        modelId: chatModel,
-      }),
-      requestSuggestions: requestSuggestions({
-        session,
-        dataStream,
-        modelId: chatModel,
-      }),
-    },
-    experimental_telemetry: {
-      isEnabled: isProductionEnvironment,
-      functionId: "stream-text",
-    },
-    onFinish: async ({ text }) => {
-      const assistantResponseText = text ?? "";
+          messages: modelMessages,
+          stopWhen: stepCountIs(5),
+          experimental_activeTools:
+            isReasoningModel && !supportsTools
+              ? []
+              : [
+                  "getWeather",
+                  "createDocument",
+                  "editDocument",
+                  "updateDocument",
+                  "requestSuggestions",
+                ],
+          providerOptions: {},
+          tools: {
+            getWeather,
+            createDocument: createDocument({
+              session,
+              dataStream,
+              modelId: chatModel,
+            }),
+            editDocument: editDocument({ dataStream, session }),
+            updateDocument: updateDocument({
+              session,
+              dataStream,
+              modelId: chatModel,
+            }),
+            requestSuggestions: requestSuggestions({
+              session,
+              dataStream,
+              modelId: chatModel,
+            }),
+          },
+          experimental_telemetry: {
+            isEnabled: isProductionEnvironment,
+            functionId: "stream-text",
+          },
+          onFinish: async ({ text }) => {
+            const assistantResponseText = text ?? "";
 
-  const shouldTriggerEvaluation =
-  currentStep >= 5 && isConversationEnded(assistantResponseText);
+            const shouldTriggerEvaluation =
+              currentStep >= 5 && isConversationEnded(assistantResponseText);
 
-      if (shouldTriggerEvaluation) {
-        dataStream.write({
-          type: "data-clear",
-          data: null,
-        } as any);
+            if (shouldTriggerEvaluation) {
+              dataStream.write({
+                type: "data-clear",
+                data: null,
+              } as any);
 
-        dataStream.write({
-          type: "data-id",
-          data: "certification-result",
-        } as any);
+              dataStream.write({
+                type: "data-id",
+                data: "certification-result",
+              } as any);
 
-        dataStream.write({
-          type: "data-kind",
-          data: "certification",
-        } as any);
+              dataStream.write({
+                type: "data-kind",
+                data: "certification",
+              } as any);
 
-        dataStream.write({
-          type: "data-title",
-          data: "Certification Result",
-        } as any);
+              dataStream.write({
+                type: "data-title",
+                data: "Certification Result",
+              } as any);
 
-        dataStream.write({
-          type: "data-certification",
-          data: certificationResult,
-        } as any);
+              dataStream.write({
+                type: "data-certification",
+                data: certificationResult,
+              } as any);
 
-        dataStream.write({
-          type: "data-finish",
-          data: null,
-        } as any);
-      }
-    },
-  });
+              dataStream.write({
+                type: "data-finish",
+                data: null,
+              } as any);
+            }
+          },
+        });
 
-  dataStream.merge(
-    result.toUIMessageStream({ sendReasoning: isReasoningModel })
-  );
+        dataStream.merge(
+          result.toUIMessageStream({ sendReasoning: isReasoningModel })
+        );
 
-  if (titlePromise) {
-    const title = await titlePromise;
-    dataStream.write({ type: "data-chat-title", data: title });
-    updateChatTitleById({ chatId: id, title });
-  }
-},
+        if (titlePromise) {
+          const title = await titlePromise;
+          dataStream.write({ type: "data-chat-title", data: title });
+          updateChatTitleById({ chatId: id, title });
+        }
+      },
       generateId: generateUUID,
       onFinish: async ({ messages: finishedMessages }) => {
         if (isToolApprovalFlow) {
           for (const finishedMsg of finishedMessages) {
             const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
+
             if (existingMsg) {
               await updateMessage({
                 id: finishedMsg.id,
@@ -865,8 +871,10 @@ ${supplierContext}`.trim(),
         if (!process.env.REDIS_URL) {
           return;
         }
+
         try {
           const streamContext = getStreamContext();
+
           if (streamContext) {
             const streamId = generateId();
             await createStreamId({ streamId, chatId: id });
