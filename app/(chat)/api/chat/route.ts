@@ -757,15 +757,24 @@ Express serious doubt, suspend validation, and require documented justification 
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
+        dataStream.write({
+          type: "data-clear",
+          data: null,
+        } as any);
+
         const shouldTriggerEvaluation =
-  currentStep >= 5 &&
-  isConversationEnded(lastUserMessageText);
+          currentStep >= 5 && isConversationEnded(lastUserMessageText);
+
+        console.log("BOREAS_TRIGGER_DEBUG", {
+          currentStep,
+          lastUserMessageText,
+          ended: isConversationEnded(lastUserMessageText),
+          scores: boreasScores,
+          shouldTriggerEvaluation,
+        });
 
         if (shouldTriggerEvaluation) {
-          dataStream.write({
-            type: "data-clear",
-            data: null,
-          } as any);
+          console.log("BOREAS_TRIGGER_FIRED");
 
           dataStream.write({
             type: "data-id",
