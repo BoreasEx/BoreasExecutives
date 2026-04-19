@@ -216,12 +216,31 @@ function didPassStep(scores: EvaluationScores, step: Step): boolean {
   return priorities.some((dimension) => scores[dimension] >= threshold);
 }
 
-function getCurrentStep(scores: EvaluationScores): Step {
+function getScoredStep(scores: EvaluationScores): Step {
   if (!didPassStep(scores, 1)) return 1;
   if (!didPassStep(scores, 2)) return 2;
   if (!didPassStep(scores, 3)) return 3;
   if (!didPassStep(scores, 4)) return 4;
   return 5;
+}
+
+function getForcedStepFromTurnCount(uiMessages: ChatMessage[]): Step {
+  const userTurns = uiMessages.filter((m) => m.role === "user").length;
+
+  if (userTurns <= 2) return 1;
+  if (userTurns <= 4) return 2;
+  if (userTurns <= 6) return 3;
+  if (userTurns <= 8) return 4;
+  return 5;
+}
+
+function getCurrentStep(
+  scores: EvaluationScores,
+  uiMessages: ChatMessage[]
+): Step {
+  const scoredStep = getScoredStep(scores);
+  const forcedStep = getForcedStepFromTurnCount(uiMessages);
+  return Math.max(scoredStep, forcedStep) as Step;
 }
 
 function isConversationEnded(message: string): boolean {
@@ -239,7 +258,17 @@ function isConversationEnded(message: string): boolean {
     text.includes("we can move forward under conditions") ||
     text.includes("we can move forward subject to validation") ||
     text.includes("send your final offer") ||
-    text.includes("submit the full file for review")
+    text.includes("submit the full file for review") ||
+    text.includes("pause the process") ||
+    text.includes("terminate the negotiation") ||
+    text.includes("terminate this negotiation") ||
+    text.includes("we will pause here") ||
+    text.includes("we cannot proceed further") ||
+    text.includes("validation remains suspended") ||
+    text.includes("we acknowledge termination") ||
+    text.includes("we acknowledge that we cannot proceed") ||
+    text.includes("we will terminate the negotiation") ||
+    text.includes("we must pause the process")
   );
 }
 
@@ -380,7 +409,7 @@ function getRelevantWeakness(
   scores: EvaluationScores,
   step: Step
 ): keyof EvaluationScores {
-  const priorities = getPriorityDimensions(step);
+  const priorities = [...getPriorityDimensions(step)];
   return priorities.sort((a, b) => scores[a] - scores[b])[0];
 }
 
@@ -434,7 +463,7 @@ function buildBoreasContext(
   lastUserMessageText: string
 ): string {
   const scores = scoreConversation(uiMessages, lastUserMessageText);
-  const step = getCurrentStep(scores);
+  const step = getCurrentStep(scores, uiMessages);
   const style = getBuyerStyle(scores);
   const weakness = getRelevantWeakness(scores, step);
   const toneLine = toneTemplates[style][weakness];
@@ -472,8 +501,10 @@ Behavior instructions:
 - Focus primarily on this question or objection: "${questionLine}"
 - Do not reveal scores, steps, or evaluation logic
 - Do not become helpful
-- If the answer is weak, remain on the same issue and press harder
+- If the answer is weak, challenge once only
+- If the answer remains weak after one follow-up, briefly note the gap and move to the next validation point
 - If the answer is structured, become more analytical and selective
+- From step 5 onward, close the negotiation quickly and issue a clear proceed / pause / reject signal
 - The supplier may be either the producer or a trader/intermediary
 - The origin must remain Egypt
 
@@ -721,7 +752,7 @@ Express serious doubt, suspend validation, and require documented justification 
     }
 
     const boreasScores = scoreConversation(uiMessages, lastUserMessageText);
-    const currentStep = getCurrentStep(boreasScores);
+    const currentStep = getCurrentStep(boreasScores, uiMessages);
     const certificationResult = buildCertificationResult(boreasScores);
     const boreasContext = buildBoreasContext(uiMessages, lastUserMessageText);
 
@@ -773,9 +804,11 @@ ${supplierContext}`.trim(),
           },
           onFinish: async ({ text }) => {
             const assistantResponseText = text ?? "";
+            const userTurns = uiMessages.filter((m) => m.role === "user").length;
 
             const shouldTriggerEvaluation =
-              currentStep >= 5 && isConversationEnded(assistantResponseText);
+              (currentStep >= 5 || userTurns >= 8) &&
+              isConversationEnded(assistantResponseText);
 
             if (shouldTriggerEvaluation) {
               dataStream.write({
