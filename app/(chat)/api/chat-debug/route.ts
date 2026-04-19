@@ -357,10 +357,31 @@ function buildCertificationResult(scores: EvaluationScores) {
   };
 }
 
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    route: "chat-debug",
+    message: "chat-debug route is live",
+    usage: {
+      method: "POST",
+      bodyShape: {
+        messages: [
+          {
+            role: "user",
+            content: "We offer IQF strawberries from Egypt, FOB basis.",
+          },
+        ],
+      },
+    },
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const messages = Array.isArray(body.messages) ? (body.messages as DebugMessage[]) : [];
+    const messages = Array.isArray(body.messages)
+      ? (body.messages as DebugMessage[])
+      : [];
 
     if (messages.length === 0) {
       return NextResponse.json(
