@@ -761,10 +761,9 @@ Express serious doubt, suspend validation, and require documented justification 
       execute: async ({ writer: dataStream }) => {
         const userTurns = uiMessages.filter((m) => m.role === "user").length;
 
-        const shouldTriggerEvaluation =
-          currentStep >= 5 ||
-          userTurns >= 8 ||
-          isConversationEnded(lastUserMessageText);
+	const shouldTriggerEvaluation =
+  userTurns >= 8 ||
+  (currentStep >= 5 && isConversationEnded(lastUserMessageText));
 
         if (shouldTriggerEvaluation) {
           dataStream.write({
