@@ -209,6 +209,21 @@ function getStepThreshold(step: Step): ScoreLevel {
   }
 }
 
+function getPriorityDimensions(step: Step): Array<keyof EvaluationScores> {
+  switch (step) {
+    case 1:
+      return ["offerStructure", "technicalDepth"];
+    case 2:
+      return ["technicalDepth", "offerStructure"];
+    case 3:
+      return ["technicalDepth", "operationalCredibility"];
+    case 4:
+      return ["operationalCredibility", "technicalDepth"];
+    case 5:
+      return ["buyerRiskReduction", "operationalCredibility"];
+  }
+}
+
 function didPassStep(scores: EvaluationScores, step: Step): boolean {
   const priorities = getPriorityDimensions(step);
   const threshold = getStepThreshold(step);
@@ -270,21 +285,6 @@ function isConversationEnded(message: string): boolean {
     text.includes("we will terminate the negotiation") ||
     text.includes("we must pause the process")
   );
-}
-
-function getPriorityDimensions(step: Step): Array<keyof EvaluationScores> {
-  switch (step) {
-    case 1:
-      return ["offerStructure", "technicalDepth"];
-    case 2:
-      return ["technicalDepth", "offerStructure"];
-    case 3:
-      return ["technicalDepth", "operationalCredibility"];
-    case 4:
-      return ["operationalCredibility", "technicalDepth"];
-    case 5:
-      return ["buyerRiskReduction", "operationalCredibility"];
-  }
 }
 
 function extractTechnicalSignals(message: string): TechnicalSignals {
@@ -759,6 +759,47 @@ Express serious doubt, suspend validation, and require documented justification 
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
+        const userTurns = uiMessages.filter((m) => m.role === "user").length;
+
+        const shouldTriggerEvaluation =
+          currentStep >= 5 ||
+          userTurns >= 8 ||
+          isConversationEnded(lastUserMessageText);
+
+        if (shouldTriggerEvaluation) {
+          dataStream.write({
+            type: "data-clear",
+            data: null,
+          } as any);
+
+          dataStream.write({
+            type: "data-id",
+            data: "certification-result",
+          } as any);
+
+          dataStream.write({
+            type: "data-kind",
+            data: "certification",
+          } as any);
+
+          dataStream.write({
+            type: "data-title",
+            data: "Certification Result",
+          } as any);
+
+          dataStream.write({
+            type: "data-certification",
+            data: certificationResult,
+          } as any);
+
+          dataStream.write({
+            type: "data-finish",
+            data: null,
+          } as any);
+
+          return;
+        }
+
         const result = streamText({
           model: getLanguageModel(chatModel),
           system: `${systemPrompt({ requestHints, supportsTools })}
@@ -801,46 +842,6 @@ ${supplierContext}`.trim(),
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
             functionId: "stream-text",
-          },
-          onFinish: async ({ text }) => {
-            const assistantResponseText = text ?? "";
-            const userTurns = uiMessages.filter((m) => m.role === "user").length;
-
-            const shouldTriggerEvaluation =
-              (currentStep >= 5 || userTurns >= 8) &&
-              isConversationEnded(assistantResponseText);
-
-            if (shouldTriggerEvaluation) {
-              dataStream.write({
-                type: "data-clear",
-                data: null,
-              } as any);
-
-              dataStream.write({
-                type: "data-id",
-                data: "certification-result",
-              } as any);
-
-              dataStream.write({
-                type: "data-kind",
-                data: "certification",
-              } as any);
-
-              dataStream.write({
-                type: "data-title",
-                data: "Certification Result",
-              } as any);
-
-              dataStream.write({
-                type: "data-certification",
-                data: certificationResult,
-              } as any);
-
-              dataStream.write({
-                type: "data-finish",
-                data: null,
-              } as any);
-            }
           },
         });
 
