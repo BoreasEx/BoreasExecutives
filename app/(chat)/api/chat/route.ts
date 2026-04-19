@@ -259,7 +259,7 @@ function getCurrentStep(
 }
 
 function isConversationEnded(message: string): boolean {
-  const text = message.toLowerCase();
+  const text = message.toLowerCase().trim();
 
   return (
     text.includes("we will not proceed") ||
@@ -270,10 +270,6 @@ function isConversationEnded(message: string): boolean {
     text.includes("not acceptable for us") ||
     text.includes("under these conditions, we cannot move forward") ||
     text.includes("under these conditions, we will not proceed") ||
-    text.includes("we can move forward under conditions") ||
-    text.includes("we can move forward subject to validation") ||
-    text.includes("send your final offer") ||
-    text.includes("submit the full file for review") ||
     text.includes("pause the process") ||
     text.includes("terminate the negotiation") ||
     text.includes("terminate this negotiation") ||
@@ -283,7 +279,9 @@ function isConversationEnded(message: string): boolean {
     text.includes("we acknowledge termination") ||
     text.includes("we acknowledge that we cannot proceed") ||
     text.includes("we will terminate the negotiation") ||
-    text.includes("we must pause the process")
+    text.includes("we must pause the process") ||
+    text.includes("end of discussion") ||
+    text.includes("end of negotiation")
   );
 }
 
