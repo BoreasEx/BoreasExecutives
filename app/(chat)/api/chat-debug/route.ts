@@ -1,5 +1,50 @@
 import { NextResponse } from "next/server";
 
+function withCors(response: NextResponse) {
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  return response;
+}
+
+export async function OPTIONS() {
+  return withCors(new NextResponse(null, { status: 204 }));
+}
+
+export async function GET() {
+  return withCors(
+    NextResponse.json({
+      ok: true,
+      route: "chat-debug",
+      message: "chat-debug route is live",
+    })
+  );
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+
+    return withCors(
+      NextResponse.json({
+        ok: true,
+        received: body,
+      })
+    );
+  } catch (error) {
+    return withCors(
+      NextResponse.json(
+        {
+          ok: false,
+          error: "chat-debug failed",
+        },
+        { status: 500 }
+      )
+    );
+  }
+}
+import { NextResponse } from "next/server";
+
 type ScoreLevel = 0 | 1 | 2 | 3;
 type Step = 1 | 2 | 3 | 4 | 5;
 type BuyerStyle = "disqualifying" | "analytical" | "strategic";
