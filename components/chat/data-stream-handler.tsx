@@ -1,143 +1,110 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSWRConfig } from "swr";
-import { unstable_serialize } from "swr/infinite";
-import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
-import {
-  artifactDefinitions,
-  type CertificationArtifact,
-  type UIArtifact,
-} from "./artifact";
+import { useArtifact } from "@/hooks/use-artifact";
 import { useDataStream } from "./data-stream-provider";
-import { getChatHistoryPaginationKey } from "./sidebar-history";
+
+type BoreasScores = {
+  offerStructure: number;
+  technicalDepth: number;
+  operationalCredibility: number;
+  buyerRiskReduction: number;
+};
+
+type CertificationPayload = {
+  status: "fail" | "borderline" | "pass" | "strong_pass";
+  scores: BoreasScores;
+  verdict: string;
+  weaknesses: string[];
+};
+
+function isValidCertificationPayload(value: unknown): value is CertificationPayload {
+  if (!value || typeof value !== "object") return false;
+
+  const candidate = value as Partial<CertificationPayload>;
+
+  if (
+    candidate.status !== "fail" &&
+    candidate.status !== "borderline" &&
+    candidate.status !== "pass" &&
+    candidate.status !== "strong_pass"
+  ) {
+    return false;
+  }
+
+  if (!candidate.scores || typeof candidate.scores !== "object") {
+    return false;
+  }
+
+  const scores = candidate.scores as Partial<BoreasScores>;
+
+  const scoreValues = [
+    scores.offerStructure,
+    scores.technicalDepth,
+    scores.operationalCredibility,
+    scores.buyerRiskReduction,
+  ];
+
+  if (!scoreValues.every((value) => typeof value === "number")) {
+    return false;
+  }
+
+  if (typeof candidate.verdict !== "string") {
+    return false;
+  }
+
+  if (
+    !Array.isArray(candidate.weaknesses) ||
+    !candidate.weaknesses.every((item) => typeof item === "string")
+  ) {
+    return false;
+  }
+
+  return true;
+}
 
 export function DataStreamHandler() {
-  const { dataStream, setDataStream } = useDataStream();
-  const { mutate } = useSWRConfig();
-
-  const { artifact, setArtifact, setMetadata } = useArtifact();
+  const { dataStream } = useDataStream();
+  const { setArtifact } = useArtifact();
 
   useEffect(() => {
-    if (!dataStream?.length) {
-      return;
-    }
+    if (!dataStream?.length) return;
 
-    const newDeltas = dataStream.slice();
-    setDataStream([]);
+    for (const item of dataStream) {
+      if (!item || typeof item !== "object" || !("type" in item)) continue;
 
-    for (const delta of newDeltas) {
-      if (delta.type === "data-chat-title") {
-        mutate(unstable_serialize(getChatHistoryPaginationKey));
-        continue;
-      }
+      switch (item.type) {
+        case "data-certification": {
+          const payload = "data" in item ? item.data : undefined;
 
-      const artifactDefinition = artifactDefinitions.find(
-        (currentArtifactDefinition) =>
-          currentArtifactDefinition.kind === artifact.kind
-      );
-
-      if (artifactDefinition?.onStreamPart) {
-        artifactDefinition.onStreamPart({
-          streamPart: delta,
-          setArtifact,
-          setMetadata,
-        });
-      }
-
-      setArtifact((draftArtifact): UIArtifact => {
-        if (!draftArtifact) {
-          return { ...initialArtifactData, status: "streaming" };
-        }
-
-        switch (delta.type) {
-          case "data-id":
-            return {
-              ...draftArtifact,
-              documentId: delta.data,
-              status: "streaming",
-            };
-
-          case "data-title":
-            return {
-              ...draftArtifact,
-              title: delta.data,
-              status: "streaming",
-            };
-
-          case "data-kind":
-            if (delta.data === "certification") {
-              const nextArtifact: CertificationArtifact = {
-                title: draftArtifact.title,
-                documentId: draftArtifact.documentId,
-                kind: "certification",
-                content:
-                  draftArtifact.kind === "certification"
-                    ? draftArtifact.content
-                    : {
-                        status: "borderline",
-                        scores: {
-                          offerStructure: 0,
-                          technicalDepth: 0,
-                          operationalCredibility: 0,
-                          buyerRiskReduction: 0,
-                        },
-                        verdict: "",
-                        weaknesses: [],
-                      },
-                isVisible: draftArtifact.isVisible,
-                status: "streaming",
-                boundingBox: draftArtifact.boundingBox,
-              };
-
-              return nextArtifact;
-            }
-
-            return {
-              title: draftArtifact.title,
-              documentId: draftArtifact.documentId,
-              kind: delta.data,
-              content:
-                draftArtifact.kind === "certification"
-                  ? ""
-                  : draftArtifact.content,
-              isVisible: draftArtifact.isVisible,
-              status: "streaming",
-              boundingBox: draftArtifact.boundingBox,
-            };
-
-          case "data-clear":
-            return {
-              ...initialArtifactData,
-              status: "idle",
-            };
-
-          case "data-finish":
-            return {
-              ...draftArtifact,
-              status: "idle",
-            };
-
-          case "data-certification": {
-            const certificationArtifact: CertificationArtifact = {
-              title: draftArtifact.title,
-              documentId: draftArtifact.documentId,
-              kind: "certification",
-              status: "idle",
-              content: delta.data,
-              isVisible: true,
-              boundingBox: draftArtifact.boundingBox,
-            };
-
-            return certificationArtifact;
+          if (!isValidCertificationPayload(payload)) {
+            console.warn("Invalid certification payload ignored", payload);
+            continue;
           }
 
-          default:
-            return draftArtifact;
+          setArtifact({
+            documentId: "certification-result",
+            title: "Certification Result",
+            kind: "certification",
+            status: "idle",
+            isVisible: true,
+            boundingBox: {
+              top: 80,
+              left: 0,
+              width: 0,
+              height: 0,
+            },
+            content: payload,
+          });
+
+          break;
         }
-      });
+
+        default:
+          break;
+      }
     }
-  }, [dataStream, setArtifact, setMetadata, artifact, setDataStream, mutate]);
+  }, [dataStream, setArtifact]);
 
   return null;
 }
