@@ -616,6 +616,7 @@ function buildCertificationResult(scores: EvaluationScores) {
 }
 
 export async function POST(request: Request) {
+  throw new Error("TEST_BOREAS_ROUTE");
   let requestBody: PostRequestBody;
 
   try {
