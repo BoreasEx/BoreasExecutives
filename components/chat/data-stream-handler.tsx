@@ -107,18 +107,9 @@ export function DataStreamHandler() {
             };
 
           case "data-clear":
-            if (draftArtifact.kind === "certification") {
-              return draftArtifact;
-            }
-
             return {
-              title: draftArtifact.title,
-              documentId: draftArtifact.documentId,
-              kind: draftArtifact.kind,
-              content: "",
-              isVisible: draftArtifact.isVisible,
-              status: "streaming",
-              boundingBox: draftArtifact.boundingBox,
+              ...initialArtifactData,
+              status: "idle",
             };
 
           case "data-finish":
