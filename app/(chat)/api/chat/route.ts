@@ -758,7 +758,8 @@ Express serious doubt, suspend validation, and require documented justification 
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
         const shouldTriggerEvaluation =
-          currentStep >= 5 && isConversationEnded(lastUserMessageText);
+  currentStep >= 5 &&
+  isConversationEnded(lastUserMessageText);
 
         if (shouldTriggerEvaluation) {
           dataStream.write({
