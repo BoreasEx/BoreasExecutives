@@ -290,10 +290,6 @@ function normalizeForEndCheck(message: string): string {
   return message.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-function normalizeForEndCheck(message: string): string {
-  return message.toLowerCase().replace(/\s+/g, " ").trim();
-}
-
 function isConversationEnded(message: string): boolean {
   const text = normalizeForEndCheck(message);
 
