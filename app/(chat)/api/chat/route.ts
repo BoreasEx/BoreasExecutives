@@ -290,30 +290,50 @@ function normalizeForEndCheck(message: string): string {
   return message.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+function normalizeForEndCheck(message: string): string {
+  return message.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 function isConversationEnded(message: string): boolean {
   const text = normalizeForEndCheck(message);
 
-  return (
-    text.includes("we will not proceed") ||
-    text.includes("we cannot proceed") ||
-    text.includes("we cannot move forward") ||
-    text.includes("we will not move forward") ||
-    text.includes("i refuse") ||
-    text.includes("not acceptable for us") ||
-    text.includes("under these conditions, we cannot move forward") ||
-    text.includes("under these conditions, we will not proceed") ||
-    text.includes("pause the process") ||
-    text.includes("terminate the negotiation") ||
-    text.includes("terminate this negotiation") ||
-    text.includes("we will pause here") ||
-    text.includes("we cannot proceed further") ||
-    text.includes("validation remains suspended") ||
-    text.includes("we acknowledge termination") ||
-    text.includes("we acknowledge that we cannot proceed") ||
-    text.includes("we will terminate the negotiation") ||
-    text.includes("we must pause the process") ||
-    text.includes("end of discussion") ||
-    text.includes("end of negotiation")
+  if (!text) return false;
+
+  const positiveClosures = [
+    "we can move forward under these conditions",
+    "we can move forward under conditions",
+    "we are prepared to move to the next stage under the following conditions",
+    "proceed to draft detailed contract for final review",
+    "status: proceed",
+    "status proceed",
+    "pending contract review, all key risk and consistency elements are covered",
+  ];
+
+  const negativeClosures = [
+    "we will not proceed",
+    "we cannot proceed",
+    "we cannot move forward",
+    "we will not move forward",
+    "i refuse",
+    "not acceptable for us",
+    "under these conditions, we cannot move forward",
+    "under these conditions, we will not proceed",
+    "pause the process",
+    "terminate the negotiation",
+    "terminate this negotiation",
+    "we will pause here",
+    "we cannot proceed further",
+    "validation remains suspended",
+    "we acknowledge termination",
+    "we acknowledge that we cannot proceed",
+    "we will terminate the negotiation",
+    "we must pause the process",
+    "end of discussion",
+    "end of negotiation",
+  ];
+
+  return [...positiveClosures, ...negativeClosures].some((phrase) =>
+    text.includes(phrase)
   );
 }
 
