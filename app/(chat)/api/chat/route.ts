@@ -878,7 +878,10 @@ dataStream.write({
 
           return;
         }
-
+dataStream.write({
+  type: "data-title",
+  data: "Certification Result DEBUG MARKER",
+} as any);
         const result = streamText({
           model: getLanguageModel(chatModel),
           system: `${systemPrompt({ requestHints, supportsTools })}
