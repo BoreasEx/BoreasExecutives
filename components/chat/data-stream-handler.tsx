@@ -154,6 +154,10 @@ export function DataStreamHandler() {
               status: "idle",
             };
 
+case "data-debug":
+  console.log("BOREAS_STREAM_DEBUG", delta.data);
+  return draftArtifact;
+
           case "data-certification": {
             if (!isValidCertificationPayload(delta.data)) {
               return draftArtifact;

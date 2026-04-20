@@ -825,6 +825,21 @@ Express serious doubt, suspend validation, and require documented justification 
           shouldTriggerEvaluation,
         });
 
+dataStream.write({
+  type: "data-debug",
+  data: {
+    chatId: id,
+    currentStep,
+    userTurns,
+    assistantTurns,
+    lastUserMessageText,
+    lastAssistantMessageText,
+    ended,
+    scores: boreasScores,
+    shouldTriggerEvaluation,
+  },
+} as any);
+
         if (shouldTriggerEvaluation) {
           console.log("BOREAS_TRIGGER_FIRED", {
             chatId: id,
