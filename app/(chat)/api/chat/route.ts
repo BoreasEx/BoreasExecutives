@@ -303,6 +303,7 @@ function isConversationEnded(message: string): boolean {
     "status: proceed",
     "status proceed",
     "pending contract review, all key risk and consistency elements are covered",
+    "all key risk and consistency elements are covered",
   ];
 
   const negativeClosures = [
@@ -315,6 +316,7 @@ function isConversationEnded(message: string): boolean {
     "under these conditions, we cannot move forward",
     "under these conditions, we will not proceed",
     "pause the process",
+    "pause engagement until",
     "terminate the negotiation",
     "terminate this negotiation",
     "we will pause here",
@@ -326,6 +328,7 @@ function isConversationEnded(message: string): boolean {
     "we must pause the process",
     "end of discussion",
     "end of negotiation",
+    "this gap cannot be bridged",
   ];
 
   return [...positiveClosures, ...negativeClosures].some((phrase) =>
@@ -650,7 +653,6 @@ export async function POST(request: Request) {
     }
 
     const user = session.user;
-    console.log("TEST_BOREAS_ROUTE_HIT");
 
     const chatModel = allowedModelIds.has(selectedChatModel)
       ? selectedChatModel
@@ -841,21 +843,6 @@ Express serious doubt, suspend validation, and require documented justification 
           shouldTriggerEvaluation,
         });
 
-dataStream.write({
-  type: "data-debug",
-  data: {
-    chatId: id,
-    currentStep,
-    userTurns,
-    assistantTurns,
-    lastUserMessageText,
-    lastAssistantMessageText,
-    ended,
-    scores: boreasScores,
-    shouldTriggerEvaluation,
-  },
-} as any);
-
         if (shouldTriggerEvaluation) {
           console.log("BOREAS_TRIGGER_FIRED", {
             chatId: id,
@@ -894,10 +881,7 @@ dataStream.write({
 
           return;
         }
-dataStream.write({
-  type: "data-title",
-  data: "Certification Result DEBUG MARKER",
-} as any);
+
         const result = streamText({
           model: getLanguageModel(chatModel),
           system: `${systemPrompt({ requestHints, supportsTools })}
