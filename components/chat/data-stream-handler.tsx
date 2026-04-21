@@ -83,30 +83,37 @@ export function DataStreamHandler() {
               status: "streaming",
             };
 
-          case "data-kind": {
-            if (delta.data === "certification") {
-              const nextArtifact: CertificationArtifact = {
-                title: currentArtifact.title,
-                documentId: currentArtifact.documentId,
-                kind: "certification",
-                content:
-                  currentArtifact.kind === "certification"
-                    ? currentArtifact.content
-                    : createEmptyCertificationContent(),
-                isVisible: currentArtifact.isVisible,
-                status: "streaming",
-                boundingBox: currentArtifact.boundingBox,
-              };
+case "data-kind": {
+  if (delta.data === "certification") {
+    const nextArtifact: CertificationArtifact = {
+      title: currentArtifact.title,
+      documentId: currentArtifact.documentId,
+      kind: "certification",
+      content:
+        currentArtifact.kind === "certification"
+          ? currentArtifact.content
+          : createEmptyCertificationContent(),
+      isVisible: currentArtifact.isVisible,
+      status: "streaming",
+      boundingBox: currentArtifact.boundingBox,
+    };
 
-              return nextArtifact;
-            }
+    return nextArtifact;
+  }
 
-            return {
-              ...currentArtifact,
-              kind: delta.data,
-              status: "streaming",
-            };
-          }
+  return {
+    title: currentArtifact.title,
+    documentId: currentArtifact.documentId,
+    kind: delta.data,
+    content:
+      currentArtifact.kind === "certification"
+        ? ""
+        : currentArtifact.content,
+    isVisible: currentArtifact.isVisible,
+    status: "streaming",
+    boundingBox: currentArtifact.boundingBox,
+  };
+}
 
           case "data-certification": {
             const certificationArtifact: CertificationArtifact = {
