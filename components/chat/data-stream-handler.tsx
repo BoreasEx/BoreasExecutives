@@ -45,11 +45,6 @@ export function DataStreamHandler() {
         continue;
       }
 
-      if (delta.type === "data-debug") {
-        console.log("BOREAS_STREAM_DEBUG", delta.data);
-        continue;
-      }
-
       const artifactDefinition = artifactDefinitions.find(
         (currentArtifactDefinition) =>
           currentArtifactDefinition.kind === artifact.kind
