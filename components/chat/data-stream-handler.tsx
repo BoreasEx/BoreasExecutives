@@ -12,10 +12,23 @@ import {
 import { useDataStream } from "./data-stream-provider";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
 
+function createEmptyCertificationContent() {
+  return {
+    status: "borderline" as const,
+    scores: {
+      offerStructure: 0,
+      technicalDepth: 0,
+      operationalCredibility: 0,
+      buyerRiskReduction: 0,
+    },
+    verdict: "",
+    weaknesses: [],
+  };
+}
+
 export function DataStreamHandler() {
   const { dataStream, setDataStream } = useDataStream();
   const { mutate } = useSWRConfig();
-
   const { artifact, setArtifact, setMetadata } = useArtifact();
 
   useEffect(() => {
@@ -23,7 +36,7 @@ export function DataStreamHandler() {
       return;
     }
 
-    const newDeltas = dataStream.slice();
+    const newDeltas = [...dataStream];
     setDataStream([]);
 
     for (const delta of newDeltas) {
@@ -32,10 +45,8 @@ export function DataStreamHandler() {
         continue;
       }
 
-      const debugDelta = delta as { type?: string; data?: unknown };
-
-      if (debugDelta.type === "data-debug") {
-        console.log("BOREAS_STREAM_DEBUG", debugDelta.data);
+      if (delta.type === "data-debug") {
+        console.log("BOREAS_STREAM_DEBUG", delta.data);
         continue;
       }
 
@@ -53,98 +64,85 @@ export function DataStreamHandler() {
       }
 
       setArtifact((draftArtifact): UIArtifact => {
-        if (!draftArtifact) {
-          return { ...initialArtifactData, status: "streaming" };
-        }
+        const currentArtifact =
+          draftArtifact ?? { ...initialArtifactData, status: "streaming" };
 
         switch (delta.type) {
-          case "data-id":
-            return {
-              ...draftArtifact,
-              documentId: delta.data,
-              status: "streaming",
-            };
-
-          case "data-title":
-            return {
-              ...draftArtifact,
-              title: delta.data,
-              status: "streaming",
-            };
-
-          case "data-kind":
-            if (delta.data === "certification") {
-              const nextArtifact: CertificationArtifact = {
-                title: draftArtifact.title,
-                documentId: draftArtifact.documentId,
-                kind: "certification",
-                content:
-                  draftArtifact.kind === "certification"
-                    ? draftArtifact.content
-                    : {
-                        status: "borderline",
-                        scores: {
-                          offerStructure: 0,
-                          technicalDepth: 0,
-                          operationalCredibility: 0,
-                          buyerRiskReduction: 0,
-                        },
-                        verdict: "",
-                        weaknesses: [],
-                      },
-                isVisible: draftArtifact.isVisible,
-                status: "streaming",
-                boundingBox: draftArtifact.boundingBox,
-              };
-
-              return nextArtifact;
-            }
-
-            return {
-              title: draftArtifact.title,
-              documentId: draftArtifact.documentId,
-              kind: delta.data,
-              content:
-                draftArtifact.kind === "certification"
-                  ? ""
-                  : draftArtifact.content,
-              isVisible: draftArtifact.isVisible,
-              status: "streaming",
-              boundingBox: draftArtifact.boundingBox,
-            };
-
           case "data-clear":
             return {
               ...initialArtifactData,
               status: "idle",
             };
 
-          case "data-finish":
+          case "data-id":
             return {
-              ...draftArtifact,
-              status: "idle",
+              ...currentArtifact,
+              documentId: delta.data,
+              status: "streaming",
             };
+
+          case "data-title":
+            return {
+              ...currentArtifact,
+              title: delta.data,
+              status: "streaming",
+            };
+
+          case "data-kind": {
+            if (delta.data === "certification") {
+              const nextArtifact: CertificationArtifact = {
+                title: currentArtifact.title,
+                documentId: currentArtifact.documentId,
+                kind: "certification",
+                content:
+                  currentArtifact.kind === "certification"
+                    ? currentArtifact.content
+                    : createEmptyCertificationContent(),
+                isVisible: currentArtifact.isVisible,
+                status: "streaming",
+                boundingBox: currentArtifact.boundingBox,
+              };
+
+              return nextArtifact;
+            }
+
+            return {
+              ...currentArtifact,
+              kind: delta.data,
+              status: "streaming",
+            };
+          }
 
           case "data-certification": {
             const certificationArtifact: CertificationArtifact = {
-              title: draftArtifact.title,
-              documentId: draftArtifact.documentId,
+              title:
+                currentArtifact.title && currentArtifact.title.trim().length > 0
+                  ? currentArtifact.title
+                  : "Certification Result",
+              documentId:
+                currentArtifact.documentId || "certification-result",
               kind: "certification",
               status: "idle",
               content: delta.data,
               isVisible: true,
-              boundingBox: draftArtifact.boundingBox,
+              boundingBox: currentArtifact.boundingBox,
             };
 
             return certificationArtifact;
           }
 
+          case "data-finish":
+            return {
+              ...currentArtifact,
+              status: "idle",
+            };
+
           default:
-            return draftArtifact;
+            return currentArtifact;
         }
       });
     }
-  }, [dataStream, setArtifact, setMetadata, artifact, setDataStream, mutate]);
+  }, [dataStream, setDataStream, mutate, artifact, setArtifact, setMetadata]);
 
   return null;
 }
